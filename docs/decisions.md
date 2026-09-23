@@ -1,0 +1,37 @@
+# Decisions
+
+Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
+
+## 2026-09-23 — Dotmac owns personal Mac setup
+
+The current project is Dotmac. It owns the desired dotfiles, agent guidance, setup flow, and administration notes. The old `~/dotfiles` checkout and the Notion checklist are inputs for review, not competing sources of truth. This keeps the next agent's starting point clear.
+
+## 2026-09-23 — Start with a thin, agent-led flow
+
+Getting a signed-in local agent able to read Dotmac is Step 1. A human may need to install and sign in to the agent, then clone the public repository on a new Mac. The agent inspects the Mac and handles later tasks one at a time; the raw checklist does not authorize every install or system change.
+
+## 2026-09-23 — Use Homebrew and GNU Stow
+
+`Brewfile` names only Git, GitHub CLI, and GNU Stow. Stow provides preview, repeatable linking, conflict detection, and removal without a custom installer. Existing home files are preserved outside the repo before first application. `stow --adopt` is excluded because it modifies the package source.
+
+Homebrew Bundle upgrades outdated listed packages by default, so setup uses `--no-upgrade`. Package updates remain a separate reviewed action.
+
+Evidence: the [GNU Stow manual](https://www.gnu.org/software/stow/manual/stow.html) describes its conflict preflight and repeatable link behavior; the current Mac's first preview stopped on five existing targets, and a repeat apply after migration made no changes.
+
+## 2026-09-23 — Publish Dotmac with automated secret scanning
+
+Dotmac is hosted as a public GitHub repository at `d3ming/dotmac` so a new Mac can clone it directly. The README gives the HTTPS clone command; authentication is needed only to push changes.
+
+The GitHub Actions workflow runs Gitleaks on pushes, pull requests, and manual dispatches, fetching full Git history so prior commits are scanned too. It uses commit-pinned actions and disables PR comments and artifact uploads so findings are not copied into extra surfaces. GitHub's built-in secret scanning also runs automatically on public repositories, as described in the [GitHub documentation](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning).
+
+## 2026-09-23 — Keep the first dotfile set small
+
+Dotmac manages Zsh, EditorConfig, Readline, and Vim. The Zsh setup uses built-in features and no plugin framework. The old Vim theme bundle and broad macOS or Homebrew scripts are not part of the managed state. New files or scripts need a demonstrated purpose and a safe rerun path.
+
+## 2026-09-23 — Create only directories required by the managed setup
+
+The `p` alias targets lowercase `~/projects`, so the bootstrap flow creates it with `mkdir -p` before the alias is used. This is safe to rerun and needs no custom installer. Uppercase `~/Projects` is not required by Dotmac.
+
+## 2026-09-23 — Put Dotmac under projects and keep local agent handoff outside Git
+
+The normal checkout location is `~/projects/dotmac`, under the directory opened by `p`. The setup instructions create `~/projects` before cloning. Agents keep a concise `.agent-local/handoff.md` for session-specific context; Git ignores that directory. The tracked worklog and decisions remain the durable source for future Macs, because ignored files do not travel with a clone.
