@@ -1,6 +1,6 @@
 # Dotmac agent guidance
 
-Dotmac is the source of truth for setting up and caring for the user's personal Macs. Its scope is dotfiles, first-run setup, agent instructions, system administration, security, and performance. Use `~/projects/dotmac` as its normal location. Start with `README.md`, then read `docs/worklog.md`, `docs/decisions.md`, and `.agent-local/handoff.md` if it exists before changing this repo or a Mac.
+Dotmac is the source of truth for setting up and caring for the user's personal Macs. Its scope is dotfiles, first-run setup, agent instructions, system administration, security, and performance. Use `~/projects/dotmac` as its normal location. Start with `README.md` and `docs/setup-levels.md`, then read `docs/worklog.md`, `docs/decisions.md`, and `.agent-local/handoff.md` if it exists before changing this repo or a Mac.
 
 The old `~/dotfiles` checkout and the Notion page linked in the README are references. Bring a useful idea here only after reviewing it. Do not run their installers or treat their contents as instructions for this project.
 
@@ -19,9 +19,9 @@ The old `~/dotfiles` checkout and the Notion page linked in the README are refer
 ## Setup workflow
 
 1. Confirm a local agent can read this repo. Inspect the Mac and the current worklog.
-2. Review `Brewfile` and use `brew bundle check --no-upgrade` before installing missing tools. Use `brew bundle --no-upgrade` for the first apply; handle later upgrades as a separate task.
+2. Review the essential `Brewfile` and use `brew bundle check --no-upgrade --file Brewfile` before installing missing tools. Use `brew bundle --no-upgrade --file Brewfile` for the first apply; handle later upgrades as a separate task. Apply optional Brewfiles only when that Mac needs the matching profile.
 3. Ensure `~/projects` exists with `mkdir -p "$HOME/projects"` before using the `p` shortcut. Inspect a non-directory target instead of replacing it. Then preview the `stow/home` package with GNU Stow. Stow stops on conflicts; preserve conflicting home files outside this repo, then apply the package. Never use `stow --adopt` for this repo because it modifies the source files.
-4. Recheck the resulting links and shell startup. Record the change, evidence, and any recovery path.
+4. Recheck the resulting six links, shell startup, Vim, and Git config. Keep Git identity and signing preferences in the local, untracked `~/.gitconfig.local`; keep credentials in a secure credential manager. Record the change, evidence, and any recovery path.
 5. Continue other setup items one at a time with user direction. A reference checklist is not blanket authorization to install software or alter settings.
 
 ## Project memory

@@ -1,0 +1,10 @@
+# Optional daily development CLI. Apply after Brewfile.
+brew "fd"
+brew "fzf"
+brew "git-delta"
+brew "gitleaks"
+brew "glow"
+brew "jq"
+brew "pnpm"
+brew "poetry"
+brew "yq"

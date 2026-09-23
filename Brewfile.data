@@ -1,0 +1,5 @@
+# Optional research and data tools. No services are started.
+brew "dolt"
+brew "duckdb"
+brew "imagemagick"
+brew "poppler"

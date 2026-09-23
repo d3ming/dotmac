@@ -1,0 +1,4 @@
+# Optional GUI tools. Choose this only on Macs used for coding and notes.
+cask "ghostty"
+cask "zed"
+cask "obsidian"

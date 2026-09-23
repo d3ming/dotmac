@@ -2,6 +2,12 @@
 
 Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
 
+## 2026-09-23 — Layer the desired setup instead of copying every installed package
+
+The essential level adds ripgrep and uv to Git, GitHub CLI, and GNU Stow because code search and Python project setup are broad, portable needs here. Independent optional Brewfiles cover daily development CLI tools, desktop apps, and data/research tools. Heavy services, provider accounts, version managers, and narrowly owned tools stay out until a Mac needs them. The inventory and rationale live in `docs/setup-levels.md`; installed state and long-range shell history are evidence, not a full usage measure.
+
+The home package now includes a sanitized Git config with the portable defaults observed on this Mac. Name, email, and signing preferences stay in `~/.gitconfig.local`; credentials stay in a secure manager. The old Git aliases and global ignore file need review before promotion. A current Stow preview contradicts the earlier claim that Dotmac's home files remain linked on this Mac, so no live home files were replaced during this change.
+
 ## 2026-09-23 — Dotmac owns personal Mac setup
 
 The current project is Dotmac. It owns the desired dotfiles, agent guidance, setup flow, and administration notes. The old `~/dotfiles` checkout and the Notion checklist are inputs for review, not competing sources of truth. This keeps the next agent's starting point clear.
