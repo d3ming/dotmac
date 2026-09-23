@@ -22,7 +22,7 @@ Evidence: the [GNU Stow manual](https://www.gnu.org/software/stow/manual/stow.ht
 
 Dotmac is hosted as a public GitHub repository at `d3ming/dotmac` so a new Mac can clone it directly. The README gives the HTTPS clone command; authentication is needed only to push changes.
 
-The GitHub Actions workflow runs Gitleaks on pushes, pull requests, and manual dispatches, fetching full Git history so prior commits are scanned too. It uses commit-pinned actions and disables PR comments and artifact uploads so findings are not copied into extra surfaces. GitHub's built-in secret scanning also runs automatically on public repositories, as described in the [GitHub documentation](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning).
+The GitHub Actions workflow runs Gitleaks on pushes, pull requests, and manual dispatches, fetching full Git history so prior commits are scanned too. It uses commit-pinned actions and disables PR comments and artifact uploads so findings are not copied into extra surfaces. GitHub's native secret scanning and push protection are enabled on the public repository; the initial alert check returned zero findings. See the [GitHub secret scanning documentation](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning) and [push protection documentation](https://docs.github.com/en/code-security/concepts/secret-security/push-protection).
 
 ## 2026-09-23 — Keep the first dotfile set small
 

@@ -69,7 +69,7 @@ stow --delete --dir "$PWD/stow" --target "$HOME" home
 
 Restore any preserved pre-Dotmac files from their backup only after checking that the target path is clear. Backups remain outside this repo.
 
-GitHub Actions runs Gitleaks on every push, pull request, and manual dispatch. It scans the full Git history and fails if it finds a secret. GitHub also runs secret scanning automatically for public repositories; see [GitHub's secret scanning documentation](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning). Do not commit a secret with the intent to delete it later, because it remains in Git history.
+GitHub Actions runs Gitleaks on every push, pull request, and manual dispatch. It scans the full Git history and fails if it finds a secret. GitHub's native secret scanning and push protection are enabled too: public repositories are scanned automatically, and push protection blocks supported secrets from being pushed. See [GitHub's secret scanning documentation](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning) and [push protection documentation](https://docs.github.com/en/code-security/concepts/secret-security/push-protection). Do not commit a secret with the intent to delete it later, because it remains in Git history.
 
 ## Repository map
 

@@ -8,7 +8,7 @@ Keep Dotmac as the source of truth for personal Mac setup and make the setup pat
 
 - The Brewfile baseline contains Git, GitHub CLI, and GNU Stow; `brew bundle check --no-upgrade --file Brewfile` succeeded after setup.
 - Dotmac's five managed home files are linked through GNU Stow. A repeat preview showed no planned changes, and Zsh and Vim startup were checked.
-- The repository is hosted publicly at https://github.com/d3ming/dotmac. GitHub Actions runs Gitleaks for pushes, pull requests, and manual scans; `.agent-local/` remains excluded from Git.
+- The repository is hosted publicly at https://github.com/d3ming/dotmac. GitHub secret scanning and push protection are enabled, with zero initial alerts. GitHub Actions runs Gitleaks for pushes, pull requests, and manual scans; `.agent-local/` remains excluded from Git.
 - The optional setup backlog includes password management, display and keyboard preferences, window management, browser, and developer tools. None is part of the baseline.
 
 ## Completed on this Mac — 2026-09-23
