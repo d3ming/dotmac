@@ -10,6 +10,10 @@ The current project is Dotmac. It owns the desired dotfiles, agent guidance, set
 
 Getting a signed-in local agent able to read Dotmac is Step 1. A human may need to install and sign in to the agent, then clone the public repository on a new Mac. The agent inspects the Mac and handles later tasks one at a time; the raw checklist does not authorize every install or system change.
 
+## 2026-09-23 — Minimize time to local Codex setup
+
+The README uses the ChatGPT desktop app's local Codex project flow, one clone command, and one reusable setup prompt. The prompt authorizes installing the small Brewfile baseline and applying reviewed Stow links, so Codex can complete the core setup without routine approval stops. Optional apps and macOS or security settings remain separately requested.
+
 ## 2026-09-23 — Use Homebrew and GNU Stow
 
 `Brewfile` names only Git, GitHub CLI, and GNU Stow. Stow provides preview, repeatable linking, conflict detection, and removal without a custom installer. Existing home files are preserved outside the repo before first application. `stow --adopt` is excluded because it modifies the package source.
