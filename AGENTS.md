@@ -10,6 +10,7 @@ The old `~/dotfiles` checkout and the Notion page linked in the README are refer
 - Do not install software, alter system or security settings, or change accounts or networking without a request that covers that work.
 - Prefer Homebrew for suitable packages. Check what is installed; avoid broad upgrades, cleanup, or package removal as incidental work.
 - Preserve macOS security and recovery protections. Get clarification for destructive, hard-to-reverse, or security-weakening changes.
+- Keep the configured Git remote aligned with completed, publishable work. Review the diff, commit completed changes, and push the intended branch; then check CI and security scans and address failures. Keep work local when requested, and resolve secrets, sensitive data, or unclear remote/branch state before pushing.
 - Do not store passwords, tokens, private keys, recovery keys, or sensitive machine data in this repo, notes, logs, or chat output.
 - Review code before execution. Never pipe network content into a shell, run an unreviewed remote script, or use `sudo` for Homebrew.
 - Use maintained tools instead of custom scripts when they meet the need. Every added script must have a current, documented purpose, safe reruns, and a way to preview material changes.

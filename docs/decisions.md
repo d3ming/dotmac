@@ -14,6 +14,10 @@ Getting a signed-in local agent able to read Dotmac is Step 1. A human may need 
 
 The README uses the ChatGPT desktop app's local Codex project flow, one clone command, and one reusable setup prompt. The prompt authorizes installing the small Brewfile baseline and applying reviewed Stow links, so Codex can complete the core setup without routine approval stops. Optional apps and macOS or security settings remain separately requested.
 
+## 2026-09-23 — Keep the configured remote current
+
+When a remote is configured, agents should commit and push completed, publishable work by default so the GitHub copy stays close to the local source of truth. They check CI and security scans after pushing. Local-only requests, unresolved secrets or sensitive data, and unclear branch or remote state are reasons to hold the push.
+
 ## 2026-09-23 — Use Homebrew and GNU Stow
 
 `Brewfile` names only Git, GitHub CLI, and GNU Stow. Stow provides preview, repeatable linking, conflict detection, and removal without a custom installer. Existing home files are preserved outside the repo before first application. `stow --adopt` is excluded because it modifies the package source.
