@@ -21,14 +21,14 @@ Agent-led setup for my personal Macs. Dotmac has a fast essential setup and inde
 
 ## Choose a level
 
-The essential `Brewfile` installs Git, GitHub CLI, GNU Stow, ripgrep, and uv. `stow/home` manages six portable files: `.zprofile`, `.zshrc`, `.vimrc`, `.editorconfig`, `.inputrc`, and `.gitconfig`. Keep Git identity and signing preferences in the untracked `~/.gitconfig.local`; use a secure credential manager for credentials. Existing conflicting home files must be reviewed and preserved before Stow runs.
+The essential `Brewfile` installs Git, GitHub CLI, GNU Stow, ripgrep, uv, and Ghostty, the default terminal. `stow/home` manages six portable files: `.zprofile`, `.zshrc`, `.vimrc`, `.editorconfig`, `.inputrc`, and `.gitconfig`. Keep Git identity and signing preferences in the untracked `~/.gitconfig.local`; use a secure credential manager for credentials. Existing conflicting home files must be reviewed and preserved before Stow runs.
 
 For a Mac that needs more, select only the appropriate optional profile:
 
 | Profile | Command | Adds |
 | --- | --- | --- |
 | Daily development | `brew bundle --no-upgrade --file Brewfile.dev` | CLI helpers, pnpm, and Poetry |
-| Desktop | `brew bundle --no-upgrade --file Brewfile.desktop` | Ghostty, Zed, and Obsidian |
+| Desktop | `brew bundle --no-upgrade --file Brewfile.desktop` | Zed and Obsidian |
 | Data and research | `brew bundle --no-upgrade --file Brewfile.data` | Dolt, DuckDB, ImageMagick, and Poppler |
 
 Run `brew bundle check --no-upgrade --file NAME` before applying a profile. Each optional file is independent and assumes the essential level is already installed. See [setup levels](docs/setup-levels.md) for selection criteria and what belongs in a separate encrypted backup.

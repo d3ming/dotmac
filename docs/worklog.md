@@ -6,7 +6,7 @@ Make Dotmac a portable, layered way to reproduce the current development setup w
 
 ## Known state
 
-- The essential Brewfile contains Git, GitHub CLI, GNU Stow, ripgrep, and uv. Optional Brewfiles cover daily development, desktop, and data work.
+- The essential Brewfile contains Git, GitHub CLI, GNU Stow, ripgrep, uv, and Ghostty, the user's current default terminal. Optional Brewfiles cover daily development, other desktop apps, and data work.
 - Dotmac now defines six managed home files, including portable Git defaults. On **this** Mac they are not linked: a 2026-09-23 Stow preview found conflicts with the current Zsh files and old-dotfiles Vim link. `.editorconfig` and `.inputrc` are absent. The earlier linked-files claim was stale.
 - The repository is hosted publicly at https://github.com/d3ming/dotmac. GitHub secret scanning and push protection were enabled at initial publish, when alert count was zero; that alert count has not been rechecked in this update. GitHub Actions runs Gitleaks for pushes, pull requests, and manual scans; `.agent-local/` remains excluded from Git.
 - The README gives one clone command, one local Codex setup path, and a reusable prompt for the essential level. `docs/setup-levels.md` explains optional profiles and safe backup scope.
