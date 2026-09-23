@@ -7,11 +7,12 @@ Make Dotmac a portable, layered way to reproduce the current development setup w
 ## Known state
 
 - The essential Brewfile contains Git, GitHub CLI, GNU Stow, ripgrep, uv, and Ghostty, the user's current default terminal. Optional Brewfiles cover daily development, other desktop apps, and data work.
-- Dotmac now defines six managed home files, including portable Git defaults. On **this** Mac they are not linked: a 2026-09-23 Stow preview found conflicts with the current Zsh files and old-dotfiles Vim link. `.editorconfig` and `.inputrc` are absent. The earlier linked-files claim was stale.
+- Dotmac now defines seven managed home files, including portable Git and Ghostty defaults. On **this** Mac they are not linked: a 2026-09-23 Stow preview found conflicts with the current Zsh files and old-dotfiles Git/Vim links. `.editorconfig` and `.inputrc` are absent. The earlier linked-files claim was stale. Ghostty's separate macOS config may override the managed XDG file until migrated.
 - The repository is hosted publicly at https://github.com/d3ming/dotmac. GitHub secret scanning and push protection were enabled at initial publish, when alert count was zero; that alert count has not been rechecked in this update. GitHub Actions runs Gitleaks for pushes, pull requests, and manual scans; `.agent-local/` remains excluded from Git.
 - The README gives one clone command, one local Codex setup path, and a reusable prompt for the essential level. `docs/setup-levels.md` explains optional profiles and safe backup scope.
 - `AGENTS.md` now tells agents to commit and push completed, publishable changes by default, then check CI and security scans.
 - The current Mac's Git config still links to the old dotfiles checkout; its aliases and ignore rules need a separate review before migration. Zed, shell, and macOS preferences are prioritized backup candidates, not automatically copied.
+- Four current Finder/Dock choices now have an opt-in `scripts/macos-preferences` check/apply/restore path. It is not part of essential setup and has not been applied to this Mac.
 
 ## Completed on this Mac — 2026-09-23
 
@@ -21,8 +22,9 @@ Make Dotmac a portable, layered way to reproduce the current development setup w
 - Created the initial Git commit, published Dotmac to GitHub, and added automated Gitleaks scanning before making the repository public.
 - Replaced the long README setup walkthrough with a short new-Mac quick start that delegates the standard setup to Codex.
 - Added a default remote-sync rule for agents, with safeguards for local-only requests, secrets, sensitive data, and unclear branch state.
-- Added essential and optional setup levels, portable Git defaults, and a backup-priority guide. All Brewfiles passed Ruby syntax checks; Zsh/Vim/Git config checks passed; a clean-target Stow preview showed six links; Gitleaks found no secrets in the working tree. A live-home Stow preview still stops on four conflicts.
+- Added essential and optional setup levels, portable Git defaults, and a backup-priority guide. All Brewfiles passed Ruby syntax checks; Zsh/Vim/Git config checks passed; the original clean-target Stow preview showed six files before Ghostty was added; Gitleaks found no secrets in that working tree. A live-home Stow preview still stops on four conflicts.
+- Pushed the two setup commits through `f838bb5`; the GitHub Secret scan completed successfully and native secret scanning reported zero alerts. Compared this Mac's settings with the old dotfiles script and public GitHub setup repos, then added a four-key optional macOS profile. The read-only check matched this Mac; isolated apply, rerun, and restore checks passed with a fake `defaults` command. Added a portable Ghostty appearance config: its Vesper theme is present in the installed app, and Stow previews cleanly on an empty target. Ghostty's CLI config check exited 1 without output in this sandbox, so a live Ghostty load remains unverified. No live settings were changed.
 
 ## Next action
 
-Review the current shell and Git aliases against the new portable defaults before changing live home files. Run Homebrew Bundle checks on an unrestricted Mac; this Codex sandbox denied Homebrew cache/Cellar writes during a check, although the installed essential packages were present. Apply optional profiles only on Macs with the corresponding work.
+Review the current shell and Git aliases against the new portable defaults before changing live home files. Run Homebrew Bundle checks on an unrestricted Mac; this Codex sandbox denied Homebrew cache/Cellar writes during a check, although the installed essential packages were present. Apply optional profiles only on Macs with the corresponding work. For any new macOS preference, first confirm its current value, UI meaning, reversibility, and behavior on the target macOS version.

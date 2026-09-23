@@ -21,8 +21,10 @@ The old `~/dotfiles` checkout and the Notion page linked in the README are refer
 1. Confirm a local agent can read this repo. Inspect the Mac and the current worklog.
 2. Review the essential `Brewfile` and use `brew bundle check --no-upgrade --file Brewfile` before installing missing tools. Use `brew bundle --no-upgrade --file Brewfile` for the first apply; handle later upgrades as a separate task. Apply optional Brewfiles only when that Mac needs the matching profile.
 3. Ensure `~/projects` exists with `mkdir -p "$HOME/projects"` before using the `p` shortcut. Inspect a non-directory target instead of replacing it. Then preview the `stow/home` package with GNU Stow. Stow stops on conflicts; preserve conflicting home files outside this repo, then apply the package. Never use `stow --adopt` for this repo because it modifies the source files.
-4. Recheck the resulting six links, shell startup, Vim, and Git config. Keep Git identity and signing preferences in the local, untracked `~/.gitconfig.local`; keep credentials in a secure credential manager. Record the change, evidence, and any recovery path.
+4. Recheck the managed files, shell startup, Vim, Git config, and Ghostty config. Keep Git identity and signing preferences in the local, untracked `~/.gitconfig.local`; keep credentials in a secure credential manager. Record the change, evidence, and any recovery path.
 5. Continue other setup items one at a time with user direction. A reference checklist is not blanket authorization to install software or alter settings.
+
+The optional macOS preferences profile is documented in `docs/macos-preferences.md`. Run its read-only `check` first. Apply it only when that Mac should inherit those Finder and Dock choices; keep its local backup and do not force-restart apps.
 
 ## Project memory
 

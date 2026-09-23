@@ -17,11 +17,11 @@ Agent-led setup for my personal Macs. Dotmac has a fast essential setup and inde
 3. In Codex, open `~/projects/dotmac` as a **Local** project and start a chat. The desktop app can work with the local folder you open; see the [Codex quick start](https://learn.chatgpt.com/docs/quickstart).
 4. Paste this request:
 
-   > Set up the essential level on this Mac using `AGENTS.md`, `README.md`, and `docs/setup-levels.md`. Inspect current state. If Homebrew is missing, review its current [official installation instructions](https://docs.brew.sh/Installation) and install it. Check and apply `Brewfile` with `brew bundle --no-upgrade`. Preview `stow/home`, preserve conflicts outside this repo, apply it, and verify all six links plus Zsh, Vim, and Git startup. Update `docs/worklog.md` and `.agent-local/handoff.md`. You are authorized to complete these standard tool and dotfile steps without routine confirmation. Stop before optional profiles or macOS/security changes, or if a conflict cannot be safely preserved.
+   > Set up the essential level on this Mac using `AGENTS.md`, `README.md`, and `docs/setup-levels.md`. Inspect current state. If Homebrew is missing, review its current [official installation instructions](https://docs.brew.sh/Installation) and install it. Check and apply `Brewfile` with `brew bundle --no-upgrade`. Preview `stow/home`, preserve conflicts outside this repo, apply it, and verify the managed files plus Zsh, Vim, Git, and Ghostty behavior. Update `docs/worklog.md` and `.agent-local/handoff.md`. You are authorized to complete these standard tool and dotfile steps without routine confirmation. Stop before optional profiles or macOS/security changes, or if a conflict cannot be safely preserved.
 
 ## Choose a level
 
-The essential `Brewfile` installs Git, GitHub CLI, GNU Stow, ripgrep, uv, and Ghostty, the default terminal. `stow/home` manages six portable files: `.zprofile`, `.zshrc`, `.vimrc`, `.editorconfig`, `.inputrc`, and `.gitconfig`. Keep Git identity and signing preferences in the untracked `~/.gitconfig.local`; use a secure credential manager for credentials. Existing conflicting home files must be reviewed and preserved before Stow runs.
+The essential `Brewfile` installs Git, GitHub CLI, GNU Stow, ripgrep, uv, and Ghostty, the default terminal. `stow/home` manages Zsh, Vim, EditorConfig, Readline, Git, and a small Ghostty config. Keep Git identity and signing preferences in the untracked `~/.gitconfig.local`; use a secure credential manager for credentials. Existing conflicting home files must be reviewed and preserved before Stow runs.
 
 For a Mac that needs more, select only the appropriate optional profile:
 
@@ -32,5 +32,7 @@ For a Mac that needs more, select only the appropriate optional profile:
 | Data and research | `brew bundle --no-upgrade --file Brewfile.data` | Dolt, DuckDB, ImageMagick, and Poppler |
 
 Run `brew bundle check --no-upgrade --file NAME` before applying a profile. Each optional file is independent and assumes the essential level is already installed. See [setup levels](docs/setup-levels.md) for selection criteria and what belongs in a separate encrypted backup.
+
+Four current Finder and Dock preferences have a separate [opt-in, previewable profile](docs/macos-preferences.md). Run `scripts/macos-preferences check` to compare a Mac before choosing to apply it. These settings are not part of the essential setup.
 
 GitHub Actions scans pushes and pull requests with Gitleaks. GitHub secret scanning and push protection are enabled; see [secret scanning](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning) and [push protection](https://docs.github.com/en/code-security/concepts/secret-security/push-protection).

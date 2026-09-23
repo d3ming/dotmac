@@ -1,0 +1,125 @@
+#!/bin/zsh
+# Optional, user-level Finder and Dock preferences observed on the source Mac.
+# Run without arguments to preview. Applying saves only the keys it changes.
+set -euo pipefail
+
+usage() {
+	print -u2 'usage: scripts/macos-preferences [check|apply|restore BACKUP_FILE]'
+	exit 2
+}
+
+fail() {
+	print -u2 -- "macos-preferences: $1"
+	exit 1
+}
+
+[[ $(uname -s) == Darwin ]] || fail 'macOS only'
+(( EUID != 0 )) || fail 'run as the signed-in user, not root'
+
+mode=${1:-check}
+case $mode in
+	check|apply) (( $# <= 1 )) || usage ;;
+	restore) (( $# == 2 )) || usage ;;
+	*) usage ;;
+esac
+
+repo_dir=${0:A:h:h}
+backup_dir="$repo_dir/.agent-local/macos-preferences"
+# Override only for isolated tests; normal runs use the macOS utility.
+defaults_cmd=${DOTMAC_DEFAULTS_CMD:-/usr/bin/defaults}
+
+typeset -a labels domains keys kinds desired expected
+labels=('Finder path bar' 'Finder status bar' 'Finder list view' 'Dock on left')
+domains=(com.apple.finder com.apple.finder com.apple.finder com.apple.dock)
+keys=(ShowPathbar ShowStatusBar FXPreferredViewStyle orientation)
+kinds=(-bool -bool -string -string)
+desired=(true true Nlsv left)
+expected=(1 1 Nlsv left)
+
+if [[ $mode == restore ]]; then
+	backup_file=$2
+	[[ -f $backup_file && ! -L $backup_file ]] || fail 'backup file is missing or is a symlink'
+	typeset -a restore_domains restore_keys restore_kinds restore_states restore_values
+	while IFS=$'\t' read -r domain key kind state value; do
+		case "$domain:$key:$kind" in
+			com.apple.finder:ShowPathbar:-bool|com.apple.finder:ShowStatusBar:-bool|com.apple.finder:FXPreferredViewStyle:-string|com.apple.dock:orientation:-string) ;;
+			*) fail 'backup contains an unrecognized preference' ;;
+		esac
+		[[ $state == set || $state == unset ]] || fail 'backup contains an invalid state'
+		if [[ $state == set && $kind == -bool ]]; then
+			[[ $value == 0 || $value == 1 ]] || fail 'backup contains an invalid Boolean'
+		fi
+		if [[ $state == unset && $value != - ]]; then
+			fail 'backup contains an invalid unset value'
+		fi
+		restore_domains+=($domain)
+		restore_keys+=($key)
+		restore_kinds+=($kind)
+		restore_states+=($state)
+		restore_values+=($value)
+	done < "$backup_file"
+	(( $#restore_keys > 0 )) || fail 'backup contains no preferences'
+	for (( i = 1; i <= $#restore_keys; i++ )); do
+		if [[ ${restore_states[$i]} == unset ]]; then
+			"$defaults_cmd" delete "${restore_domains[$i]}" "${restore_keys[$i]}" 2>/dev/null || true
+			if "$defaults_cmd" read "${restore_domains[$i]}" "${restore_keys[$i]}" >/dev/null 2>&1; then
+				fail "could not remove ${restore_domains[$i]}.${restore_keys[$i]}"
+			fi
+		else
+			"$defaults_cmd" write "${restore_domains[$i]}" "${restore_keys[$i]}" "${restore_kinds[$i]}" "${restore_values[$i]}"
+			actual=$("$defaults_cmd" read "${restore_domains[$i]}" "${restore_keys[$i]}")
+			[[ $actual == ${restore_values[$i]} ]] || fail "could not verify ${restore_domains[$i]}.${restore_keys[$i]}"
+		fi
+		print -r -- "restored: ${restore_domains[$i]}.${restore_keys[$i]}"
+	done
+	print 'Restart Finder or Dock when convenient to see restored settings.'
+	exit 0
+fi
+
+typeset -a changed previous_states previous_values
+for (( i = 1; i <= $#keys; i++ )); do
+	if current=$("$defaults_cmd" read "${domains[$i]}" "${keys[$i]}" 2>/dev/null); then
+		state=set
+	else
+		state=unset
+		current=-
+	fi
+	if [[ $state == set && $current == ${expected[$i]} ]]; then
+		print -r -- "ok: ${labels[$i]}"
+	else
+		print -r -- "change: ${labels[$i]} (${current} -> ${expected[$i]})"
+		changed+=($i)
+		previous_states+=($state)
+		previous_values+=($current)
+	fi
+done
+
+if [[ $mode == check ]]; then
+	if (( $#changed == 0 )); then
+		exit 0
+	fi
+	exit 1
+fi
+
+if (( $#changed == 0 )); then
+	print 'All selected preferences already match.'
+	exit 0
+fi
+
+umask 077
+mkdir -p -- "$backup_dir"
+backup_file="$backup_dir/$(date +%Y%m%d-%H%M%S)-$$.tsv"
+for (( j = 1; j <= $#changed; j++ )); do
+	i=${changed[$j]}
+	[[ ${previous_values[$j]} != *$'\t'* && ${previous_values[$j]} != *$'\n'* ]] || fail 'a current value cannot be safely backed up'
+	printf '%s\t%s\t%s\t%s\t%s\n' "${domains[$i]}" "${keys[$i]}" "${kinds[$i]}" "${previous_states[$j]}" "${previous_values[$j]}" >> "$backup_file"
+done
+print -r -- "Previous values saved: $backup_file"
+
+for i in $changed; do
+	"$defaults_cmd" write "${domains[$i]}" "${keys[$i]}" "${kinds[$i]}" "${desired[$i]}"
+	actual=$("$defaults_cmd" read "${domains[$i]}" "${keys[$i]}")
+	[[ $actual == ${expected[$i]} ]] || fail "could not verify ${domains[$i]}.${keys[$i]}"
+	print -r -- "applied: ${labels[$i]}"
+done
+print 'Restart Finder or Dock when convenient to see changed settings.'

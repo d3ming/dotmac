@@ -2,6 +2,12 @@
 
 Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
 
+## 2026-09-23 — Automate only four observed user-level macOS preferences
+
+Finder path/status bars, Finder list view, and Dock position are set on this Mac and have narrow `defaults` keys. `scripts/macos-preferences` provides a read-only check, an opt-in apply that changes only differing keys, read-back verification, and a local selective backup/restore. It does not run during essential setup or restart Finder/Dock. Older dotfiles and public setup repos were used as references, but their broad scripts include stale or unrelated settings; the reviewed sources and exclusions are in `docs/macos-preferences.md`.
+
+Ghostty is the default terminal, so its portable appearance settings are part of essential Stow. The current macOS-specific Ghostty config remains live on this Mac and is not changed here; it loads after Dotmac's XDG config and may override it. Display P3 and very large scrollback remain machine-local until there is a cross-Mac reason to manage them.
+
 ## 2026-09-23 — Layer the desired setup instead of copying every installed package
 
 The essential level adds ripgrep and uv to Git, GitHub CLI, and GNU Stow because code search and Python project setup are broad, portable needs here. The user confirmed Ghostty is now the default terminal, so its cask is essential too. Independent optional Brewfiles cover daily development CLI tools, other desktop apps, and data/research tools. Heavy services, provider accounts, version managers, and narrowly owned tools stay out until a Mac needs them. The inventory and rationale live in `docs/setup-levels.md`; installed state and long-range shell history are evidence, not a full usage measure.
