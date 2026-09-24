@@ -1,0 +1,282 @@
+#!/bin/bash
+set -euo pipefail
+
+repo_dir=$(cd "$(dirname "$0")/.." && pwd -P)
+json=0
+
+usage() {
+	cat <<'EOF'
+Usage:
+  scripts/dotmac [--json] profiles
+  scripts/dotmac [--json] plan --profile NAME
+  scripts/dotmac [--json] apply --profile NAME
+  scripts/dotmac [--json] home check|apply
+  scripts/dotmac [--json] preferences check|apply|restore BACKUP_FILE
+  scripts/dotmac [--json] --help|--version
+
+Profiles: essential, development, gui-apps, data
+
+`plan` and `home check` are read-only. `apply` changes only the selected
+profile. Home links are previewed first and conflicts stop the operation.
+macOS preferences remain a separate, explicit action.
+EOF
+}
+
+json_quote() {
+	local value=$1
+	value=${value//\\/\\\\}
+	value=${value//\"/\\\"}
+	value=${value//$'\n'/\\n}
+	value=${value//$'\r'/\\r}
+	value=${value//$'\t'/\\t}
+	printf '"%s"' "$value"
+}
+
+result() {
+	local ok=$1 operation=$2 target=$3 state=$4 code=$5 details=$6
+	if (( json )); then
+		printf '{"ok":%s,"operation":' "$ok"
+		json_quote "$operation"
+		printf ',"target":'
+		json_quote "$target"
+		printf ',"status":'
+		json_quote "$state"
+		printf ',"exit_code":%s,"details":' "$code"
+		json_quote "$details"
+		printf '}\n'
+	elif [[ -n $details ]]; then
+		printf '%s\n' "$details"
+	fi
+}
+
+fail() {
+	local message=$1 code=${2:-2}
+	if (( json )); then
+		result false error dotmac error "$code" "$message"
+	else
+		printf 'dotmac: %s\n' "$message" >&2
+	fi
+	exit "$code"
+}
+
+profile_file() {
+	case $1 in
+		essential) printf '%s/Brewfile\n' "$repo_dir" ;;
+		development) printf '%s/Brewfile.development\n' "$repo_dir" ;;
+		gui-apps) printf '%s/Brewfile.gui-apps\n' "$repo_dir" ;;
+		data) printf '%s/Brewfile.data\n' "$repo_dir" ;;
+		*) return 1 ;;
+	esac
+}
+
+app_bundle_for_cask() {
+	case $1 in
+		ghostty) printf 'Ghostty.app\n' ;;
+		zed) printf 'Zed.app\n' ;;
+		obsidian) printf 'Obsidian.app\n' ;;
+		rectangle) printf 'Rectangle.app\n' ;;
+		*) return 1 ;;
+	esac
+}
+
+require_macos() {
+	[[ $(uname -s) == Darwin ]] || fail 'this command is for macOS' 2
+}
+
+require_brew() {
+	command -v brew >/dev/null 2>&1 || fail 'Homebrew is required; review https://docs.brew.sh/Installation before installing it' 127
+}
+
+# Homebrew Bundle only treats registered casks as installed. If a known app
+# bundle is already in a standard Applications directory, skip that cask
+# without adopting or changing the existing app.
+find_unmanaged_apps() {
+	local brewfile=$1 token app
+	DOTMAC_NOTES=''
+	DOTMAC_CASK_SKIP=${HOMEBREW_BUNDLE_CASK_SKIP:-}
+	while IFS= read -r token; do
+		[[ -n $token ]] || continue
+		if ! app=$(app_bundle_for_cask "$token"); then
+			fail "cask '$token' has no app-bundle mapping in scripts/dotmac" 2
+		fi
+		if brew list --cask --versions "$token" >/dev/null 2>&1; then
+			continue
+		fi
+		if [[ -d "/Applications/$app" || -d "$HOME/Applications/$app" ]]; then
+			case " $DOTMAC_CASK_SKIP " in
+				*" $token "*) ;;
+				*) DOTMAC_CASK_SKIP="${DOTMAC_CASK_SKIP:+$DOTMAC_CASK_SKIP }$token" ;;
+			esac
+			DOTMAC_NOTES+="${DOTMAC_NOTES:+$'\n'}present but not Homebrew-managed; skipped without adopting: $app"
+		fi
+	done < <(sed -nE 's/^[[:space:]]*cask[[:space:]]+"([^"]+)".*/\1/p' "$brewfile")
+}
+
+profile_command() {
+	local action=$1 profile='' file check_output details rc
+	shift
+	while (($#)); do
+		case $1 in
+			--profile)
+				(($# >= 2)) || fail '--profile requires a name' 2
+				profile=$2
+				shift 2
+				;;
+			--profile=*) profile=${1#*=}; shift ;;
+			-h|--help) usage; return 0 ;;
+			*) fail "unexpected argument: $1" 2 ;;
+		esac
+	done
+	[[ -n $profile ]] || fail "$action requires --profile NAME" 2
+	file=$(profile_file "$profile") || fail "unknown profile '$profile'; run 'scripts/dotmac profiles'" 2
+	[[ -f $file ]] || fail "profile file is missing: $file" 2
+	require_macos
+	require_brew
+	find_unmanaged_apps "$file"
+
+	if [[ $action == plan ]]; then
+		if check_output=$(HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle check --no-upgrade --file "$file" 2>&1); then
+			rc=0
+		else
+			rc=$?
+		fi
+		details="$DOTMAC_NOTES${DOTMAC_NOTES:+$'\n'}$check_output"
+		if (( rc == 0 )); then
+			result true plan "$profile" ready 0 "$details"
+		else
+			result false plan "$profile" incomplete "$rc" "$details"
+		fi
+		return "$rc"
+	fi
+
+	if check_output=$(HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle check --no-upgrade --file "$file" 2>&1); then
+		details="$DOTMAC_NOTES${DOTMAC_NOTES:+$'\n'}${check_output:+$check_output$'\n'}No changes needed; the profile is already satisfied."
+		result true apply "$profile" already-satisfied 0 "$details"
+		return 0
+	else
+		rc=$?
+	fi
+
+	if (( json )); then
+		if HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle install --no-upgrade --file "$file" >&2; then
+			result true apply "$profile" applied 0 "$DOTMAC_NOTES"
+			return 0
+		else
+			rc=$?
+			result false apply "$profile" failed "$rc" "$DOTMAC_NOTES"
+			return "$rc"
+		fi
+	fi
+	if HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle install --no-upgrade --file "$file"; then
+		result true apply "$profile" applied 0 "$DOTMAC_NOTES"
+		return 0
+	else
+		rc=$?
+		result false apply "$profile" failed "$rc" "$DOTMAC_NOTES"
+		return "$rc"
+	fi
+}
+
+home_command() {
+	local action=$1 preview='' applied='' details='' rc
+	(($# == 1)) || fail 'usage: scripts/dotmac home check|apply' 2
+	case $action in check|apply) ;; *) fail 'usage: scripts/dotmac home check|apply' 2 ;; esac
+	require_macos
+	command -v stow >/dev/null 2>&1 || fail 'GNU Stow is required; apply the essential profile first' 127
+
+	if preview=$(stow -n -v -d "$repo_dir/stow" -t "$HOME" home 2>&1); then
+		:
+	else
+		rc=$?
+		result false "home $action" home conflicts "$rc" "$preview"
+		return "$rc"
+	fi
+	if [[ $action == check ]]; then
+		result true 'home check' home clean 0 "$preview"
+		return 0
+	fi
+	if applied=$(stow -v -d "$repo_dir/stow" -t "$HOME" home 2>&1); then
+		details=$'Preview:\n'"$preview"$'\nApply:\n'"$applied"
+		result true 'home apply' home applied 0 "$details"
+	else
+		rc=$?
+		details=$'Preview:\n'"$preview"$'\nApply failed:\n'"$applied"
+		result false 'home apply' home failed "$rc" "$details"
+		return "$rc"
+	fi
+}
+
+preferences_command() {
+	(($# >= 1)) || fail 'usage: scripts/dotmac preferences check|apply|restore BACKUP_FILE' 2
+	local action=$1 output rc
+	if output=$("$repo_dir/scripts/macos-preferences" "$@" 2>&1); then
+		result true preferences "$action" complete 0 "$output"
+	else
+		rc=$?
+		if [[ $action == check && $output == *'change:'* ]]; then
+			result false preferences check different "$rc" "$output"
+		else
+			result false preferences "$action" failed "$rc" "$output"
+		fi
+		return "$rc"
+	fi
+}
+
+show_profiles() {
+	if (( json )); then
+		printf '{"profiles":['
+		printf '{"name":"essential","description":"Baseline for every managed Mac, including Rectangle"},'
+		printf '{"name":"development","description":"Additional daily development CLI tools"},'
+		printf '{"name":"gui-apps","description":"Optional GUI apps: Zed and Obsidian"},'
+		printf '{"name":"data","description":"Data and research tools"}]}'
+		printf '\n'
+	else
+		cat <<'EOF'
+Profiles:
+  essential    Baseline for every managed Mac, including Rectangle
+  development  Additional daily development CLI tools
+  gui-apps     Optional GUI apps: Zed and Obsidian
+  data         Data and research tools
+EOF
+	fi
+}
+
+if [[ ${1:-} == --json ]]; then
+	json=1
+	shift
+fi
+
+command_name=${1:-}
+[[ -n $command_name ]] || fail 'missing command; run scripts/dotmac --help' 2
+shift
+
+case $command_name in
+	-h|--help|help) usage ;;
+	--version|version)
+		(($# == 0)) || fail 'version takes no arguments' 2
+		version=$(git -C "$repo_dir" describe --always --dirty 2>/dev/null || printf 'unknown')
+		if (( json )); then
+			printf '{"name":"dotmac","revision":'
+			json_quote "$version"
+			printf '}\n'
+		else
+			printf 'dotmac %s\n' "$version"
+		fi
+		;;
+	profiles)
+		if [[ ${1:-} == -h || ${1:-} == --help ]]; then usage; exit 0; fi
+		(($# == 0)) || fail 'profiles takes no arguments' 2
+		show_profiles
+		;;
+	plan|apply) profile_command "$command_name" "$@" ;;
+	home)
+		if [[ ${1:-} == -h || ${1:-} == --help ]]; then usage; exit 0; fi
+		(($# >= 1)) || fail 'usage: scripts/dotmac home check|apply' 2
+		home_command "$@"
+		;;
+	preferences)
+		if [[ ${1:-} == -h || ${1:-} == --help ]]; then usage; exit 0; fi
+		preferences_command "$@"
+		;;
+	*) fail "unknown command '$command_name'; run 'scripts/dotmac --help'" 2 ;;
+esac

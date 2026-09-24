@@ -13,14 +13,14 @@ The old `~/dotfiles` checkout and the Notion page linked in the README are refer
 - Keep the configured Git remote aligned with completed, publishable work. Review the diff, commit completed changes, and push the intended branch; then check CI and security scans and address failures. Keep work local when requested, and resolve secrets, sensitive data, or unclear remote/branch state before pushing.
 - Do not store passwords, tokens, private keys, recovery keys, or sensitive machine data in this repo, notes, logs, or chat output.
 - Review code before execution. Never pipe network content into a shell, run an unreviewed remote script, or use `sudo` for Homebrew.
-- Use maintained tools instead of custom scripts when they meet the need. Every added script must have a current, documented purpose, safe reruns, and a way to preview material changes.
+- Use maintained tools instead of custom scripts when they meet the need. Prefer `scripts/dotmac` for profile plans/applies and home-link previews; keep macOS preferences as a separate explicit action. Every added script must have a current, documented purpose, safe reruns, and a way to preview material changes.
 - Use the personal `macos-sysadmin` skill at `~/.codex/skills/macos-sysadmin` when it exists. An agent on a new Mac should use current Apple, Homebrew, and vendor documentation if that personal skill is not present.
 
 ## Setup workflow
 
 1. Confirm a local agent can read this repo. Inspect the Mac and the current worklog.
-2. Review the essential `Brewfile` and use `brew bundle check --no-upgrade --file Brewfile` before installing missing tools. Use `brew bundle --no-upgrade --file Brewfile` for the first apply; handle later upgrades as a separate task. Apply optional Brewfiles only when that Mac needs the matching profile.
-3. Ensure `~/projects` exists with `mkdir -p "$HOME/projects"` before using the `p` shortcut. Inspect a non-directory target instead of replacing it. Then preview the `stow/home` package with GNU Stow. Stow stops on conflicts; preserve conflicting home files outside this repo, then apply the package. Never use `stow --adopt` for this repo because it modifies the source files.
+2. Review the essential `Brewfile` and run `scripts/dotmac plan --profile essential` before installing missing tools. Use `scripts/dotmac apply --profile essential` for the apply; it uses Homebrew Bundle with `--no-upgrade` and skips known apps already present outside Homebrew without adopting them. Apply optional profiles only when that Mac needs them.
+3. Ensure `~/projects` exists with `mkdir -p "$HOME/projects"` before using the `p` shortcut. Inspect a non-directory target instead of replacing it. Run `scripts/dotmac home check`, preserve conflicting home files outside this repo, then run `scripts/dotmac home apply`. The apply repeats the Stow preview and stops on conflicts. Never use `stow --adopt` for this repo because it modifies the source files.
 4. Recheck the managed files, shell startup, Vim, Git config, and Ghostty config. Keep Git identity and signing preferences in the local, untracked `~/.gitconfig.local`; keep credentials in a secure credential manager. Record the change, evidence, and any recovery path.
 5. Continue other setup items one at a time with user direction. A reference checklist is not blanket authorization to install software or alter settings.
 

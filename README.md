@@ -1,6 +1,6 @@
 # Dotmac
 
-Agent-led setup for my personal Macs. Dotmac has a fast essential setup and independent optional profiles for a fuller development, desktop, or research Mac. See [setup levels and backup priorities](docs/setup-levels.md).
+Agent-led setup for my personal Macs. Dotmac has a fast essential setup and independent optional profiles for development, GUI apps, and research. Use [`scripts/dotmac`](scripts/dotmac) to inspect profiles, plan changes, and apply them safely. See [setup levels and backup priorities](docs/setup-levels.md).
 
 ## New Mac quick start
 
@@ -17,22 +17,22 @@ Agent-led setup for my personal Macs. Dotmac has a fast essential setup and inde
 3. In Codex, open `~/projects/dotmac` as a **Local** project and start a chat. The desktop app can work with the local folder you open; see the [Codex quick start](https://learn.chatgpt.com/docs/quickstart).
 4. Paste this request:
 
-   > Set up the essential level on this Mac using `AGENTS.md`, `README.md`, and `docs/setup-levels.md`. Inspect current state. If Homebrew is missing, review its current [official installation instructions](https://docs.brew.sh/Installation) and install it. Check and apply `Brewfile` with `brew bundle --no-upgrade`. Preview `stow/home`, preserve conflicts outside this repo, apply it, and verify the managed files plus Zsh, Vim, Git, and Ghostty behavior. Update `docs/worklog.md` and `.agent-local/handoff.md`. You are authorized to complete these standard tool and dotfile steps without routine confirmation. Stop before optional profiles or macOS/security changes, or if a conflict cannot be safely preserved.
+   > Set up the essential level on this Mac using `AGENTS.md`, `README.md`, and `docs/setup-levels.md`. Inspect current state. If Homebrew is missing, review its current [official installation instructions](https://docs.brew.sh/Installation) and install it. Run `scripts/dotmac plan --profile essential`, then `scripts/dotmac apply --profile essential`. Run `scripts/dotmac home check`; preserve any conflicts outside this repo, then run `scripts/dotmac home apply`. Verify the managed files plus Zsh, Vim, Git, and Ghostty behavior. Update `docs/worklog.md` and `.agent-local/handoff.md`. You are authorized to complete these standard tool and dotfile steps without routine confirmation. Stop before optional profiles or macOS/security changes, or if a conflict cannot be safely preserved.
 
 ## Choose a level
 
-The essential `Brewfile` installs Git, GitHub CLI, GNU Stow, ripgrep, uv, and Ghostty, the default terminal. `stow/home` manages Zsh, Vim, EditorConfig, Readline, Git, and a small Ghostty config. Keep Git identity and signing preferences in the untracked `~/.gitconfig.local`; use a secure credential manager for credentials. Existing conflicting home files must be reviewed and preserved before Stow runs.
+The essential `Brewfile` installs Git, GitHub CLI, GNU Stow, ripgrep, uv, Ghostty (the default terminal), and Rectangle for window management. `stow/home` manages Zsh, Vim, EditorConfig, Readline, Git, and a small Ghostty config. Keep Git identity and signing preferences in the untracked `~/.gitconfig.local`; use a secure credential manager for credentials. Existing conflicting home files must be reviewed and preserved before Stow runs.
 
-For a Mac that needs more, select only the appropriate optional profile:
+For a Mac that needs more, list profiles with `scripts/dotmac profiles` and select only the appropriate one:
 
-| Profile | Command | Adds |
+| Profile | Plan / apply | Adds |
 | --- | --- | --- |
-| Daily development | `brew bundle --no-upgrade --file Brewfile.dev` | CLI helpers, pnpm, and Poetry |
-| Desktop | `brew bundle --no-upgrade --file Brewfile.desktop` | Zed and Obsidian |
-| Data and research | `brew bundle --no-upgrade --file Brewfile.data` | Dolt, DuckDB, ImageMagick, and Poppler |
+| Development | `scripts/dotmac plan --profile development` / `scripts/dotmac apply --profile development` | CLI helpers, pnpm, and Poetry |
+| GUI apps | `scripts/dotmac plan --profile gui-apps` / `scripts/dotmac apply --profile gui-apps` | Zed and Obsidian |
+| Data and research | `scripts/dotmac plan --profile data` / `scripts/dotmac apply --profile data` | Dolt, DuckDB, ImageMagick, and Poppler |
 
-Run `brew bundle check --no-upgrade --file NAME` before applying a profile. Each optional file is independent and assumes the essential level is already installed. See [setup levels](docs/setup-levels.md) for selection criteria and what belongs in a separate encrypted backup.
+`plan` is read-only. `apply` checks first and uses Homebrew Bundle with `--no-upgrade`; it does not deliberately upgrade existing packages. If a known app is already in `/Applications` or `~/Applications` but is not Homebrew-managed, Dotmac skips that cask without adopting or changing the app. Each optional profile assumes the essential level is already installed. Use `scripts/dotmac --json profiles` for machine-readable results, and see [setup levels](docs/setup-levels.md) for selection criteria and backup guidance.
 
-Four current Finder and Dock preferences have a separate [opt-in, previewable profile](docs/macos-preferences.md). Run `scripts/macos-preferences check` to compare a Mac before choosing to apply it. These settings are not part of the essential setup.
+Four current Finder and Dock preferences have a separate [opt-in, previewable profile](docs/macos-preferences.md). Run `scripts/dotmac preferences check` to compare a Mac before choosing `scripts/dotmac preferences apply`. These settings are not part of the essential setup.
 
 GitHub Actions scans pushes and pull requests with Gitleaks. GitHub secret scanning and push protection are enabled; see [secret scanning](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning) and [push protection](https://docs.github.com/en/code-security/concepts/secret-security/push-protection).

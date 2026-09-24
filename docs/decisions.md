@@ -2,6 +2,12 @@
 
 Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
 
+## 2026-09-24 — Use a preview-first CLI and make Rectangle essential
+
+`scripts/dotmac` is the repository-local interface for listing profiles, planning/applying Homebrew profiles, checking/applying Stow links, and invoking macOS preference actions. Profile names are `essential`, `development`, `gui-apps`, and `data`; `gui-apps` replaces the ambiguous `desktop` label. Keep preferences separate from app profiles. Plans are read-only, package applies use Homebrew Bundle `--no-upgrade`, and home applies repeat the Stow conflict preview. `--json` provides machine-readable status while command diagnostics remain available to agents.
+
+Rectangle belongs in the essential profile because the user wants it on every managed Mac. Its Accessibility permission remains user-approved and is never granted by Dotmac. When a known app bundle exists in `/Applications` or `~/Applications` without a Homebrew cask record, the CLI skips the cask without adopting or changing that app. On the source Mac, `/Applications/Rectangle.app` is present but not Homebrew-managed. Optional `gui-apps` contains Zed and Obsidian.
+
 ## 2026-09-23 — Automate only four observed user-level macOS preferences
 
 Finder path/status bars, Finder list view, and Dock position are set on this Mac and have narrow `defaults` keys. `scripts/macos-preferences` provides a read-only check, an opt-in apply that changes only differing keys, read-back verification, and a local selective backup/restore. It does not run during essential setup or restart Finder/Dock. Older dotfiles and public setup repos were used as references, but their broad scripts include stale or unrelated settings; the reviewed sources and exclusions are in `docs/macos-preferences.md`.
@@ -10,7 +16,7 @@ Ghostty is the default terminal, so its portable appearance settings are part of
 
 ## 2026-09-23 — Layer the desired setup instead of copying every installed package
 
-The essential level adds ripgrep and uv to Git, GitHub CLI, and GNU Stow because code search and Python project setup are broad, portable needs here. The user confirmed Ghostty is now the default terminal, so its cask is essential too. Independent optional Brewfiles cover daily development CLI tools, other desktop apps, and data/research tools. Heavy services, provider accounts, version managers, and narrowly owned tools stay out until a Mac needs them. The inventory and rationale live in `docs/setup-levels.md`; installed state and long-range shell history are evidence, not a full usage measure.
+The essential level adds ripgrep and uv to Git, GitHub CLI, and GNU Stow because code search and Python project setup are broad, portable needs here. The user confirmed Ghostty is now the default terminal, so its cask is essential too. Independent optional Brewfiles cover daily development CLI tools, GUI apps, and data/research tools. Heavy services, provider accounts, version managers, and narrowly owned tools stay out until a Mac needs them. The inventory and rationale live in `docs/setup-levels.md`; installed state and long-range shell history are evidence, not a full usage measure.
 
 The home package now includes a sanitized Git config with the portable defaults observed on this Mac. Name, email, and signing preferences stay in `~/.gitconfig.local`; credentials stay in a secure manager. The old Git aliases and global ignore file need review before promotion. A current Stow preview contradicts the earlier claim that Dotmac's home files remain linked on this Mac, so no live home files were replaced during this change.
 

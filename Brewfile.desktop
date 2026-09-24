@@ -1,3 +1,0 @@
-# Optional GUI tools. Choose this only on Macs used for coding and notes.
-cask "zed"
-cask "obsidian"

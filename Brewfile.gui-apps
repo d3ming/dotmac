@@ -1,0 +1,3 @@
+# Optional GUI apps for coding and notes.
+cask "zed"
+cask "obsidian"
