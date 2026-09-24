@@ -6,6 +6,10 @@ Record choices that should guide the next agent or the next Mac. Revisit them wh
 
 `apply` installs missing profile entries without deliberate upgrades and verifies their presence afterward. `outdated` previews only installed entries in a selected profile. `upgrade` explicitly runs Homebrew Bundle for only that profile; because Bundle upgrade also installs missing entries, it is a user-directed action, and it never cleans up undeclared packages. `inventory` prints Homebrew Bundle's machine-specific installed snapshot to stdout without tracking it. Brewfiles remain portable desired state, not a dump of one Mac's installed packages.
 
+## 2026-09-24 — Keep scheduled OS automation under its owner
+
+Cron jobs, LaunchAgents/LaunchDaemons, and login/background items are per-Mac runtime behavior, separate from package profiles and preferences. Before managing one, inspect the live state and locate its source-of-truth repo; use that repo's plan/doctor/apply workflow. Keep vendor jobs inventory-only and do not copy detailed schedules, arguments, environment values, logs, or full machine inventories into public Dotmac documentation.
+
 ## 2026-09-24 — Use a preview-first CLI and make Rectangle essential
 
 `scripts/dotmac` is the repository-local interface for listing profiles, planning/applying Homebrew profiles, checking/applying Stow links, and invoking macOS preference actions. Profile names are `essential`, `development`, `gui-apps`, and `data`; `gui-apps` replaces the ambiguous `desktop` label. Keep preferences separate from app profiles. Plans are read-only, package applies use Homebrew Bundle `--no-upgrade`, and home applies repeat the Stow conflict preview. `--json` provides machine-readable status while command diagnostics remain available to agents.
