@@ -1,4 +1,4 @@
-# Optional daily development CLI. Apply after Brewfile.
+# Optional daily development CLI tools. Apply after Brewfile.
 brew "fd"
 brew "fzf"
 brew "git-delta"
@@ -8,3 +8,4 @@ brew "jq"
 brew "pnpm"
 brew "poetry"
 brew "yq"
+cask "1password-cli"

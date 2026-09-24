@@ -7,7 +7,7 @@ Make Dotmac a portable, layered way to reproduce the current development setup t
 ## Known state
 
 - `scripts/dotmac` lists, plans, and applies the `essential`, `development`, `gui-apps`, and `data` profiles; it also previews/applies Stow links and delegates explicit macOS preference actions. JSON output is available with `--json`.
-- The essential Brewfile contains Git, GitHub CLI, GNU Stow, ripgrep, uv, Ghostty, and Rectangle. Optional Brewfiles cover daily development tools, GUI apps (Zed and Obsidian), and data work.
+- The essential Brewfile contains Git, GitHub CLI, GNU Stow, ripgrep, uv, Ghostty, Rectangle, and 1Password. Optional Brewfiles cover development tools (including 1Password CLI), GUI apps (Zed and Obsidian), and data work.
 - Dotmac now defines seven managed home files, including portable Git and Ghostty defaults. On **this** Mac they are not linked: a 2026-09-23 Stow preview found conflicts with the current Zsh files and old-dotfiles Git/Vim links. `.editorconfig` and `.inputrc` are absent. The earlier linked-files claim was stale. Ghostty's separate macOS config may override the managed XDG file until migrated.
 - The repository is hosted publicly at https://github.com/d3ming/dotmac. GitHub secret scanning and push protection were enabled at initial publish, when alert count was zero; that alert count has not been rechecked in this update. GitHub Actions runs Gitleaks for pushes, pull requests, and manual scans; `.agent-local/` remains excluded from Git.
 - The README gives one clone command, one local Codex setup path, and a reusable prompt that uses the Dotmac CLI for the essential level. `docs/setup-levels.md` explains profiles and safe backup scope.
@@ -18,8 +18,9 @@ Make Dotmac a portable, layered way to reproduce the current development setup t
 ## Completed on this Mac — 2026-09-24
 
 - Added `scripts/dotmac` with explicit profile `plan`/`apply`, `home check`/`apply`, `preferences`, `profiles`, `--help`, `--version`, and optional JSON output. Package applies check first and install missing entries with Homebrew Bundle `--no-upgrade`; home applies rerun the Stow preview and stop on conflicts.
-- Renamed the optional Brewfiles to `Brewfile.development` and `Brewfile.gui-apps`. Rectangle is in the essential profile as requested. Existing known app bundles in `/Applications` or `~/Applications` that are not Homebrew-managed are skipped without adoption; this Mac's Rectangle is already present and unmanaged.
-- Updated the README, setup guide, and agent workflow to use the CLI. Mocked CLI tests, Bash syntax checks, and Ruby Brewfile syntax checks passed. The live read-only preferences check matched; `home check` correctly reports the known Zsh/Git/Vim conflicts. No app, package, preference, or home link was changed.
+- Renamed the optional Brewfiles to `Brewfile.development` and `Brewfile.gui-apps`. Rectangle and the 1Password app are essential; 1Password CLI is optional in development. The source Mac already has Rectangle installed unmanaged, and 1Password plus `1password-cli` are Homebrew-managed. The CLI skips known unmanaged app bundles or commands without taking ownership.
+- Added the 1Password app to essential and `1password-cli` to optional development. Both casks are already Homebrew-managed on this Mac, so no install or upgrade was needed; no sign-in or Bitwarden vault migration was attempted.
+- Updated the README, setup guide, and agent workflow to use the CLI. Mocked CLI tests, Bash syntax checks, and Ruby Brewfile syntax checks passed. The live read-only preferences check matched; `home check` correctly reports the known Zsh/Git/Vim conflicts. No app, package, preference, account, or home link was changed.
 
 ## Completed on this Mac — 2026-09-23
 

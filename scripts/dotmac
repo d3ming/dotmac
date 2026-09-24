@@ -69,12 +69,14 @@ profile_file() {
 	esac
 }
 
-app_bundle_for_cask() {
+cask_artifact_for() {
 	case $1 in
-		ghostty) printf 'Ghostty.app\n' ;;
-		zed) printf 'Zed.app\n' ;;
-		obsidian) printf 'Obsidian.app\n' ;;
-		rectangle) printf 'Rectangle.app\n' ;;
+		ghostty) printf 'app:Ghostty.app\n' ;;
+		zed) printf 'app:Zed.app\n' ;;
+		obsidian) printf 'app:Obsidian.app\n' ;;
+		rectangle) printf 'app:Rectangle.app\n' ;;
+		1password) printf 'app:1Password.app\n' ;;
+		1password-cli) printf 'command:op\n' ;;
 		*) return 1 ;;
 	esac
 }
@@ -87,28 +89,44 @@ require_brew() {
 	command -v brew >/dev/null 2>&1 || fail 'Homebrew is required; review https://docs.brew.sh/Installation before installing it' 127
 }
 
-# Homebrew Bundle only treats registered casks as installed. If a known app
-# bundle is already in a standard Applications directory, skip that cask
-# without adopting or changing the existing app.
-find_unmanaged_apps() {
-	local brewfile=$1 token app
+mark_cask_skipped() {
+	local token=$1 artifact=$2
+	case " $DOTMAC_CASK_SKIP " in
+		*" $token "*) ;;
+		*) DOTMAC_CASK_SKIP="${DOTMAC_CASK_SKIP:+$DOTMAC_CASK_SKIP }$token" ;;
+	esac
+	DOTMAC_NOTES+="${DOTMAC_NOTES:+$'\n'}present but not Homebrew-managed; skipped without taking ownership: $artifact"
+}
+
+# Homebrew Bundle only treats registered casks as installed. Skip a known app
+# bundle already in Applications or a known CLI command already on PATH without
+# taking ownership or changing the existing artifact.
+find_unmanaged_casks() {
+	local brewfile=$1 token artifact app command_name
 	DOTMAC_NOTES=''
 	DOTMAC_CASK_SKIP=${HOMEBREW_BUNDLE_CASK_SKIP:-}
 	while IFS= read -r token; do
 		[[ -n $token ]] || continue
-		if ! app=$(app_bundle_for_cask "$token"); then
-			fail "cask '$token' has no app-bundle mapping in scripts/dotmac" 2
+		if ! artifact=$(cask_artifact_for "$token"); then
+			fail "cask '$token' has no artifact mapping in scripts/dotmac" 2
 		fi
 		if brew list --cask --versions "$token" >/dev/null 2>&1; then
 			continue
 		fi
-		if [[ -d "/Applications/$app" || -d "$HOME/Applications/$app" ]]; then
-			case " $DOTMAC_CASK_SKIP " in
-				*" $token "*) ;;
-				*) DOTMAC_CASK_SKIP="${DOTMAC_CASK_SKIP:+$DOTMAC_CASK_SKIP }$token" ;;
-			esac
-			DOTMAC_NOTES+="${DOTMAC_NOTES:+$'\n'}present but not Homebrew-managed; skipped without adopting: $app"
-		fi
+		case $artifact in
+			app:*)
+				app=${artifact#app:}
+				if [[ -d "/Applications/$app" || -d "$HOME/Applications/$app" ]]; then
+					mark_cask_skipped "$token" "app bundle $app"
+				fi
+				;;
+			command:*)
+				command_name=${artifact#command:}
+				if command -v "$command_name" >/dev/null 2>&1; then
+					mark_cask_skipped "$token" "command $command_name on PATH"
+				fi
+				;;
+		esac
 	done < <(sed -nE 's/^[[:space:]]*cask[[:space:]]+"([^"]+)".*/\1/p' "$brewfile")
 }
 
@@ -132,7 +150,7 @@ profile_command() {
 	[[ -f $file ]] || fail "profile file is missing: $file" 2
 	require_macos
 	require_brew
-	find_unmanaged_apps "$file"
+	find_unmanaged_casks "$file"
 
 	if [[ $action == plan ]]; then
 		if check_output=$(HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle check --no-upgrade --file "$file" 2>&1); then
@@ -225,16 +243,16 @@ preferences_command() {
 show_profiles() {
 	if (( json )); then
 		printf '{"profiles":['
-		printf '{"name":"essential","description":"Baseline for every managed Mac, including Rectangle"},'
-		printf '{"name":"development","description":"Additional daily development CLI tools"},'
+		printf '{"name":"essential","description":"Baseline tools with Rectangle and 1Password"},'
+		printf '{"name":"development","description":"Daily development tools with optional 1Password CLI"},'
 		printf '{"name":"gui-apps","description":"Optional GUI apps: Zed and Obsidian"},'
 		printf '{"name":"data","description":"Data and research tools"}]}'
 		printf '\n'
 	else
 		cat <<'EOF'
 Profiles:
-  essential    Baseline for every managed Mac, including Rectangle
-  development  Additional daily development CLI tools
+  essential    Baseline tools with Rectangle and 1Password
+  development  Daily development tools with optional 1Password CLI
   gui-apps     Optional GUI apps: Zed and Obsidian
   data         Data and research tools
 EOF

@@ -6,7 +6,7 @@ tmp=$(mktemp -d "${TMPDIR:-/tmp}/dotmac-test.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 fakebin="$tmp/bin"
 home_dir="$tmp/home"
-mkdir -p "$fakebin" "$home_dir/Applications/Rectangle.app"
+mkdir -p "$fakebin" "$home_dir/Applications/Rectangle.app" "$home_dir/Applications/1Password.app"
 
 cat > "$fakebin/brew" <<'EOF'
 #!/bin/bash
@@ -29,6 +29,12 @@ esac
 exit 64
 EOF
 chmod +x "$fakebin/brew"
+
+cat > "$fakebin/op" <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+chmod +x "$fakebin/op"
 
 cat > "$fakebin/stow" <<'EOF'
 #!/bin/bash
@@ -65,15 +71,23 @@ export DOTMAC_STOW_LOG="$tmp/stow.log"
 profiles=$("$repo_dir/scripts/dotmac" --json profiles)
 [[ $profiles == *'"name":"gui-apps"'* ]]
 [[ $profiles == *'Rectangle'* ]]
+[[ $profiles == *'1Password'* ]]
+[[ $profiles == *'1Password CLI'* ]]
 
 plan=$("$repo_dir/scripts/dotmac" --json plan --profile essential)
 [[ $plan == *'"ok":true'* ]]
-[[ $plan == *'present but not Homebrew-managed; skipped without adopting: Rectangle.app'* ]]
+[[ $plan == *'app bundle Rectangle.app'* ]]
+[[ $plan == *'app bundle 1Password.app'* ]]
 grep -q 'bundle check --no-upgrade' "$DOTMAC_BREW_LOG"
 grep -q 'skip=.*rectangle' "$DOTMAC_BREW_LOG"
+grep -q 'skip=.*1password' "$DOTMAC_BREW_LOG"
 
 gui_plan=$("$repo_dir/scripts/dotmac" --json plan --profile gui-apps)
 [[ $gui_plan == *'"ok":true'* ]]
+
+dev_plan=$("$repo_dir/scripts/dotmac" --json plan --profile development)
+[[ $dev_plan == *'command op on PATH'* ]]
+grep -q 'skip=.*1password-cli' "$DOTMAC_BREW_LOG"
 
 : > "$DOTMAC_BREW_LOG"
 apply=$("$repo_dir/scripts/dotmac" --json apply --profile essential)
@@ -94,6 +108,7 @@ fi
 install_result=$(MOCK_BREW_CHECK_STATUS=1 "$repo_dir/scripts/dotmac" --json apply --profile development 2>"$tmp/install.stderr")
 [[ $install_result == *'"status":"applied"'* ]]
 grep -q 'bundle install --no-upgrade' "$DOTMAC_BREW_LOG"
+grep -q 'skip=.*1password-cli' "$DOTMAC_BREW_LOG"
 grep -q 'mock bundle install' "$tmp/install.stderr"
 
 : > "$DOTMAC_STOW_LOG"
@@ -122,7 +137,7 @@ fi
 [[ $differing_prefs == *'"status":"different"'* ]]
 
 if command -v ruby >/dev/null 2>&1; then
-	printf '%s\n' "$profiles" "$plan" "$gui_plan" "$apply" "$plan_missing" "$install_result" "$check_home" "$home_apply" "$prefs" "$differing_prefs" | ruby -rjson -e 'STDIN.each_line { |line| JSON.parse(line) }'
+	printf '%s\n' "$profiles" "$plan" "$gui_plan" "$dev_plan" "$apply" "$plan_missing" "$install_result" "$check_home" "$home_apply" "$prefs" "$differing_prefs" | ruby -rjson -e 'STDIN.each_line { |line| JSON.parse(line) }'
 fi
 
 printf 'dotmac CLI tests passed\n'

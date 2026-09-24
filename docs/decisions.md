@@ -6,7 +6,11 @@ Record choices that should guide the next agent or the next Mac. Revisit them wh
 
 `scripts/dotmac` is the repository-local interface for listing profiles, planning/applying Homebrew profiles, checking/applying Stow links, and invoking macOS preference actions. Profile names are `essential`, `development`, `gui-apps`, and `data`; `gui-apps` replaces the ambiguous `desktop` label. Keep preferences separate from app profiles. Plans are read-only, package applies use Homebrew Bundle `--no-upgrade`, and home applies repeat the Stow conflict preview. `--json` provides machine-readable status while command diagnostics remain available to agents.
 
-Rectangle belongs in the essential profile because the user wants it on every managed Mac. Its Accessibility permission remains user-approved and is never granted by Dotmac. When a known app bundle exists in `/Applications` or `~/Applications` without a Homebrew cask record, the CLI skips the cask without adopting or changing that app. On the source Mac, `/Applications/Rectangle.app` is present but not Homebrew-managed. Optional `gui-apps` contains Zed and Obsidian.
+Rectangle belongs in the essential profile because the user wants it on every managed Mac. Its Accessibility permission remains user-approved and is never granted by Dotmac. When a known app bundle exists in `/Applications` or `~/Applications`, or a known CLI command is on `PATH`, without a Homebrew cask record, the CLI skips the cask without taking ownership or changing that artifact. On the source Mac, `/Applications/Rectangle.app` is present but not Homebrew-managed. Optional `gui-apps` contains Zed and Obsidian.
+
+## 2026-09-24 — Install 1Password everywhere; keep its CLI optional
+
+The user wants the 1Password app in the essential profile while considering a future move from Bitwarden. Install [`1password`](https://formulae.brew.sh/cask/1password) as a Homebrew cask on every managed Mac. Keep [`1password-cli`](https://formulae.brew.sh/cask/1password-cli) in the optional development profile because the `op` command is only needed for CLI workflows. On the source Mac both casks are already Homebrew-managed. Installing the app does not authorize sign-in, vault import/migration, or Bitwarden removal; those remain separate user-directed account actions. Never store vault contents or credentials in Dotmac.
 
 ## 2026-09-23 — Automate only four observed user-level macOS preferences
 
