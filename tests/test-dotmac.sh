@@ -12,18 +12,58 @@ cat > "$fakebin/brew" <<'EOF'
 #!/bin/bash
 printf '%s|skip=%s\n' "$*" "${HOMEBREW_BUNDLE_CASK_SKIP:-}" >> "$DOTMAC_BREW_LOG"
 case "$1" in
-	list) exit 1 ;;
+	list)
+		if [[ ${MOCK_BREW_ALL_INSTALLED:-0} == 1 ]]; then
+			case " $* " in
+				*" --formula "*) printf 'git\nripgrep\n' ;;
+				*" --cask "*) printf '1password\n' ;;
+			esac
+			exit 0
+		fi
+		exit 1
+		;;
 	bundle)
 		case "$2" in
 			check)
 				printf 'mock bundle check\n'
+				if [[ -n ${MOCK_BREW_CHECK_FIRST_STATUS:-} && ! -e $DOTMAC_BREW_CHECK_MARKER ]]; then
+					: > "$DOTMAC_BREW_CHECK_MARKER"
+					exit "$MOCK_BREW_CHECK_FIRST_STATUS"
+				fi
 				exit "${MOCK_BREW_CHECK_STATUS:-0}"
 				;;
 			install)
 				printf 'mock bundle install\n'
 				exit "${MOCK_BREW_INSTALL_STATUS:-0}"
 				;;
+			upgrade)
+				printf 'mock bundle upgrade\n'
+				: > "$DOTMAC_UPGRADE_MARKER"
+				exit "${MOCK_BREW_UPGRADE_STATUS:-0}"
+				;;
+			list)
+				if [[ " $* " == *" --formula "* ]]; then
+					printf 'git\nripgrep\n'
+				else
+					printf '1password\n'
+				fi
+				exit 0
+				;;
+			dump)
+				printf 'brew "git"\ncask "1password"\n'
+				exit 0
+				;;
 		esac
+		;;
+	outdated)
+		last=''
+		for last in "$@"; do :; done
+		if [[ ! -e $DOTMAC_UPGRADE_MARKER ]]; then
+			case $last in
+				ripgrep|1password) printf '%s\n' "$last"; exit 1 ;;
+			esac
+		fi
+		exit 0
 		;;
 esac
 exit 64
@@ -65,6 +105,8 @@ export PATH="$fakebin:$PATH"
 export HOME="$home_dir"
 export DOTMAC_BREW_LOG="$tmp/brew.log"
 export DOTMAC_STOW_LOG="$tmp/stow.log"
+export DOTMAC_BREW_CHECK_MARKER="$tmp/brew-check.marker"
+export DOTMAC_UPGRADE_MARKER="$tmp/brew-upgraded.marker"
 : > "$DOTMAC_BREW_LOG"
 : > "$DOTMAC_STOW_LOG"
 
@@ -103,13 +145,46 @@ fi
 ! grep -q 'bundle install' "$DOTMAC_BREW_LOG"
 
 : > "$DOTMAC_BREW_LOG"
-# The fake check reports missing and the fake installer succeeds, so the CLI
-# should report success and retain Homebrew's no-upgrade behavior.
-install_result=$(MOCK_BREW_CHECK_STATUS=1 "$repo_dir/scripts/dotmac" --json apply --profile development 2>"$tmp/install.stderr")
-[[ $install_result == *'"status":"applied"'* ]]
+# The initial check finds a missing entry; installation is followed by a
+# second check so a successful Brew exit alone cannot claim the profile is ready.
+rm -f "$DOTMAC_BREW_CHECK_MARKER"
+install_result=$(MOCK_BREW_CHECK_FIRST_STATUS=1 "$repo_dir/scripts/dotmac" --json apply --profile development 2>"$tmp/install.stderr")
+[[ $install_result == *'"status":"verified"'* ]]
 grep -q 'bundle install --no-upgrade' "$DOTMAC_BREW_LOG"
+[[ $(grep -c 'bundle check --no-upgrade' "$DOTMAC_BREW_LOG") == 2 ]]
 grep -q 'skip=.*1password-cli' "$DOTMAC_BREW_LOG"
 grep -q 'mock bundle install' "$tmp/install.stderr"
+
+: > "$DOTMAC_BREW_LOG"
+rm -f "$DOTMAC_BREW_CHECK_MARKER"
+if install_unverified=$(MOCK_BREW_CHECK_FIRST_STATUS=1 MOCK_BREW_CHECK_STATUS=1 "$repo_dir/scripts/dotmac" --json apply --profile development 2>/dev/null); then
+	printf 'expected failed post-install verification to exit nonzero\n' >&2
+	exit 1
+fi
+[[ $install_unverified == *'"status":"verification-failed"'* ]]
+
+: > "$DOTMAC_BREW_LOG"
+inventory=$("$repo_dir/scripts/dotmac" --json inventory)
+[[ $inventory == *'"status":"snapshot"'* ]]
+[[ $inventory == *'brew'*'git'* ]]
+grep -q 'bundle dump --file=-' "$DOTMAC_BREW_LOG"
+
+: > "$DOTMAC_BREW_LOG"
+outdated=$(MOCK_BREW_ALL_INSTALLED=1 "$repo_dir/scripts/dotmac" --json outdated --profile essential)
+[[ $outdated == *'"status":"updates-available"'* ]]
+[[ $outdated == *'formula ripgrep'* && $outdated == *'cask 1password'* ]]
+! grep -q 'bundle install\|bundle upgrade\|bundle cleanup' "$DOTMAC_BREW_LOG"
+
+: > "$DOTMAC_BREW_LOG"
+upgrade_result=$(MOCK_BREW_ALL_INSTALLED=1 "$repo_dir/scripts/dotmac" --json upgrade --profile essential 2>"$tmp/upgrade.stderr")
+[[ $upgrade_result == *'"status":"verified"'* ]]
+grep -Fq "bundle upgrade --file $repo_dir/Brewfile|" "$DOTMAC_BREW_LOG"
+! grep -q 'bundle cleanup' "$DOTMAC_BREW_LOG"
+
+: > "$DOTMAC_BREW_LOG"
+upgrade_noop=$(MOCK_BREW_ALL_INSTALLED=1 "$repo_dir/scripts/dotmac" --json upgrade --profile essential)
+[[ $upgrade_noop == *'"status":"already-current"'* ]]
+! grep -q 'bundle upgrade' "$DOTMAC_BREW_LOG"
 
 : > "$DOTMAC_STOW_LOG"
 check_home=$("$repo_dir/scripts/dotmac" --json home check)
@@ -137,7 +212,7 @@ fi
 [[ $differing_prefs == *'"status":"different"'* ]]
 
 if command -v ruby >/dev/null 2>&1; then
-	printf '%s\n' "$profiles" "$plan" "$gui_plan" "$dev_plan" "$apply" "$plan_missing" "$install_result" "$check_home" "$home_apply" "$prefs" "$differing_prefs" | ruby -rjson -e 'STDIN.each_line { |line| JSON.parse(line) }'
+	printf '%s\n' "$profiles" "$plan" "$gui_plan" "$dev_plan" "$apply" "$plan_missing" "$install_result" "$install_unverified" "$inventory" "$outdated" "$upgrade_result" "$upgrade_noop" "$check_home" "$home_apply" "$prefs" "$differing_prefs" | ruby -rjson -e 'STDIN.each_line { |line| JSON.parse(line) }'
 fi
 
 printf 'dotmac CLI tests passed\n'

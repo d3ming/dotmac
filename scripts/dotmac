@@ -9,15 +9,20 @@ usage() {
 Usage:
   scripts/dotmac [--json] profiles
   scripts/dotmac [--json] plan --profile NAME
+  scripts/dotmac [--json] outdated --profile NAME
   scripts/dotmac [--json] apply --profile NAME
+  scripts/dotmac [--json] upgrade --profile NAME
+  scripts/dotmac [--json] inventory
   scripts/dotmac [--json] home check|apply
   scripts/dotmac [--json] preferences check|apply|restore BACKUP_FILE
   scripts/dotmac [--json] --help|--version
 
 Profiles: essential, development, gui-apps, data
 
-`plan` and `home check` are read-only. `apply` changes only the selected
-profile. Home links are previewed first and conflicts stop the operation.
+`plan`, `outdated`, `inventory`, and `home check` do not install or upgrade packages.
+`apply` installs missing profile entries without deliberate upgrades.
+`upgrade` installs missing and upgrades outdated entries in only that profile;
+it never removes undeclared packages. Home links are previewed first.
 macOS preferences remain a separate, explicit action.
 EOF
 }
@@ -130,8 +135,177 @@ find_unmanaged_casks() {
 	done < <(sed -nE 's/^[[:space:]]*cask[[:space:]]+"([^"]+)".*/\1/p' "$brewfile")
 }
 
+list_contains() {
+	local list=$1 wanted=$2 line
+	while IFS= read -r line; do
+		[[ $line == "$wanted" ]] && return 0
+	done <<< "$list"
+	return 1
+}
+
+profile_outdated() {
+	local file=$1 formula_list cask_list installed_formula_list installed_cask_list token output rc line
+	local -a installed_formulae=() installed_casks=()
+	DOTMAC_OUTDATED=''
+
+	if formula_list=$(brew bundle list --file "$file" --formula 2>&1); then
+		:
+	else
+		rc=$?
+		fail "could not list profile formulae: $formula_list" "$rc"
+	fi
+	if cask_list=$(brew bundle list --file "$file" --cask 2>&1); then
+		:
+	else
+		rc=$?
+		fail "could not list profile casks: $cask_list" "$rc"
+	fi
+	if installed_formula_list=$(brew list --formula 2>&1); then
+		:
+	else
+		rc=$?
+		fail "could not read installed Homebrew formulae: $installed_formula_list" "$rc"
+	fi
+	if installed_cask_list=$(brew list --cask 2>&1); then
+		:
+	else
+		rc=$?
+		fail "could not read installed Homebrew casks: $installed_cask_list" "$rc"
+	fi
+
+	while IFS= read -r token; do
+		[[ -n $token ]] || continue
+		if list_contains "$installed_formula_list" "$token"; then
+			installed_formulae+=("$token")
+		fi
+	done <<< "$formula_list"
+	while IFS= read -r token; do
+		[[ -n $token ]] || continue
+		case " $DOTMAC_CASK_SKIP " in *" $token "*) continue ;; esac
+		if list_contains "$installed_cask_list" "$token"; then
+			installed_casks+=("$token")
+		fi
+	done <<< "$cask_list"
+
+	if ((${#installed_formulae[@]})); then
+		if output=$(brew outdated --formula --quiet "${installed_formulae[@]}" 2>&1); then
+			rc=0
+		else
+			rc=$?
+		fi
+		if (( rc != 0 )) && [[ -z $output ]]; then
+			fail 'Homebrew could not check profile formula updates' "$rc"
+		fi
+		while IFS= read -r line; do
+			[[ -n $line ]] || continue
+			case " ${installed_formulae[*]} " in
+				*" $line "*) DOTMAC_OUTDATED+="${DOTMAC_OUTDATED:+$'\n'}formula $line" ;;
+				*) fail "unexpected brew outdated formula result: $line" "$rc" ;;
+			esac
+		done <<< "$output"
+	fi
+	if ((${#installed_casks[@]})); then
+		if output=$(brew outdated --cask --quiet "${installed_casks[@]}" 2>&1); then
+			rc=0
+		else
+			rc=$?
+		fi
+		if (( rc != 0 )) && [[ -z $output ]]; then
+			fail 'Homebrew could not check profile cask updates' "$rc"
+		fi
+		while IFS= read -r line; do
+			[[ -n $line ]] || continue
+			case " ${installed_casks[*]} " in
+				*" $line "*) DOTMAC_OUTDATED+="${DOTMAC_OUTDATED:+$'\n'}cask $line" ;;
+				*) fail "unexpected brew outdated cask result: $line" "$rc" ;;
+			esac
+		done <<< "$output"
+	fi
+}
+
+install_bundle_and_verify() {
+	local profile=$1 file=$2 check_output rc details
+	if (( json )); then
+		if HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle install --no-upgrade --file "$file" >&2; then
+			:
+		else
+			rc=$?
+			result false apply "$profile" failed "$rc" "$DOTMAC_NOTES"
+			return "$rc"
+		fi
+	else
+		if HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle install --no-upgrade --file "$file"; then
+			:
+		else
+			rc=$?
+			result false apply "$profile" failed "$rc" "$DOTMAC_NOTES"
+			return "$rc"
+		fi
+	fi
+
+	if check_output=$(HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle check --no-upgrade --file "$file" 2>&1); then
+		details="$DOTMAC_NOTES${DOTMAC_NOTES:+$'\n'}${check_output:+$check_output$'\n'}Homebrew Bundle verified the profile after installation."
+		result true apply "$profile" verified 0 "$details"
+		return 0
+	else
+		rc=$?
+		result false apply "$profile" verification-failed "$rc" "$check_output"
+		return "$rc"
+	fi
+}
+
+upgrade_profile() {
+	local profile=$1 file=$2 check_output rc missing=0 details
+	if check_output=$(HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle check --no-upgrade --file "$file" 2>&1); then
+		:
+	else
+		missing=1
+	fi
+	profile_outdated "$file"
+	if (( ! missing )) && [[ -z $DOTMAC_OUTDATED ]]; then
+		details="$DOTMAC_NOTES${DOTMAC_NOTES:+$'\n'}Profile is installed and current; no changes needed."
+		result true upgrade "$profile" already-current 0 "$details"
+		return 0
+	fi
+
+	if (( json )); then
+		if HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle upgrade --file "$file" >&2; then
+			:
+		else
+			rc=$?
+			result false upgrade "$profile" failed "$rc" "$DOTMAC_NOTES"
+			return "$rc"
+		fi
+	else
+		if HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle upgrade --file "$file"; then
+			:
+		else
+			rc=$?
+			result false upgrade "$profile" failed "$rc" "$DOTMAC_NOTES"
+			return "$rc"
+		fi
+	fi
+
+	if check_output=$(HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle check --no-upgrade --file "$file" 2>&1); then
+		:
+	else
+		rc=$?
+		result false upgrade "$profile" verification-failed "$rc" "$check_output"
+		return "$rc"
+	fi
+	profile_outdated "$file"
+	if [[ -n $DOTMAC_OUTDATED ]]; then
+		details="Updates remain after Homebrew Bundle upgrade:"
+		details+=$'\n'"$DOTMAC_OUTDATED"
+		result false upgrade "$profile" verification-failed 1 "$details"
+		return 1
+	fi
+	details="$DOTMAC_NOTES${DOTMAC_NOTES:+$'\n'}${check_output:+$check_output$'\n'}Homebrew Bundle verified the profile after upgrade."
+	result true upgrade "$profile" verified 0 "$details"
+}
+
 profile_command() {
-	local action=$1 profile='' file check_output details rc
+	local action=$1 profile='' file check_output details rc state
 	shift
 	while (($#)); do
 		case $1 in
@@ -167,32 +341,35 @@ profile_command() {
 		return "$rc"
 	fi
 
+	if [[ $action == outdated ]]; then
+		profile_outdated "$file"
+		if [[ -n $DOTMAC_OUTDATED ]]; then
+			details="$DOTMAC_OUTDATED"
+			state=updates-available
+		else
+			details='No outdated installed dependencies in this profile.'
+			state=current
+		fi
+		details="$DOTMAC_NOTES${DOTMAC_NOTES:+$'\n'}$details"
+		result true outdated "$profile" "$state" 0 "$details"
+		return 0
+	fi
+
+	if [[ $action == upgrade ]]; then
+		if upgrade_profile "$profile" "$file"; then
+			return 0
+		else
+			rc=$?
+			return "$rc"
+		fi
+	fi
+
 	if check_output=$(HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle check --no-upgrade --file "$file" 2>&1); then
 		details="$DOTMAC_NOTES${DOTMAC_NOTES:+$'\n'}${check_output:+$check_output$'\n'}No changes needed; the profile is already satisfied."
 		result true apply "$profile" already-satisfied 0 "$details"
 		return 0
-	else
-		rc=$?
 	fi
-
-	if (( json )); then
-		if HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle install --no-upgrade --file "$file" >&2; then
-			result true apply "$profile" applied 0 "$DOTMAC_NOTES"
-			return 0
-		else
-			rc=$?
-			result false apply "$profile" failed "$rc" "$DOTMAC_NOTES"
-			return "$rc"
-		fi
-	fi
-	if HOMEBREW_BUNDLE_CASK_SKIP="$DOTMAC_CASK_SKIP" brew bundle install --no-upgrade --file "$file"; then
-		result true apply "$profile" applied 0 "$DOTMAC_NOTES"
-		return 0
-	else
-		rc=$?
-		result false apply "$profile" failed "$rc" "$DOTMAC_NOTES"
-		return "$rc"
-	fi
+	install_bundle_and_verify "$profile" "$file"
 }
 
 home_command() {
@@ -237,6 +414,29 @@ preferences_command() {
 			result false preferences "$action" failed "$rc" "$output"
 		fi
 		return "$rc"
+	fi
+}
+
+inventory_command() {
+	(($# == 0)) || fail 'inventory takes no arguments' 2
+	require_macos
+	require_brew
+	local output rc
+	if (( json )); then
+		if output=$(brew bundle dump --file=- 2>&1); then
+			result true inventory homebrew snapshot 0 "$output"
+		else
+			rc=$?
+			result false inventory homebrew failed "$rc" "$output"
+			return "$rc"
+		fi
+	else
+		if brew bundle dump --file=-; then
+			return 0
+		else
+			rc=$?
+			return "$rc"
+		fi
 	fi
 }
 
@@ -286,7 +486,11 @@ case $command_name in
 		(($# == 0)) || fail 'profiles takes no arguments' 2
 		show_profiles
 		;;
-	plan|apply) profile_command "$command_name" "$@" ;;
+	plan|outdated|apply|upgrade) profile_command "$command_name" "$@" ;;
+	inventory)
+		if [[ ${1:-} == -h || ${1:-} == --help ]]; then usage; exit 0; fi
+		inventory_command "$@"
+		;;
 	home)
 		if [[ ${1:-} == -h || ${1:-} == --help ]]; then usage; exit 0; fi
 		(($# >= 1)) || fail 'usage: scripts/dotmac home check|apply' 2
