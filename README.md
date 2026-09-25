@@ -1,6 +1,6 @@
 # Dotmac
 
-Agent-led setup for my personal Macs. Dotmac has a fast essential setup and independent optional profiles for development, GUI apps, and research. Use [`scripts/dotmac`](scripts/dotmac) to inspect profiles, plan changes, and apply them safely. See [setup levels and backup priorities](docs/setup-levels.md).
+Agent-led setup for my personal Macs. Dotmac has a fast essential setup and independent optional profiles for development, GUI apps, and research. Use [`scripts/dotmac`](scripts/dotmac) to inspect profiles, plan changes, and apply them safely. The repo-owned macOS administration skill is at [`.agents/skills/macos-sysadmin/SKILL.md`](.agents/skills/macos-sysadmin/SKILL.md). See [setup levels and backup priorities](docs/setup-levels.md).
 
 ## New Mac quick start
 

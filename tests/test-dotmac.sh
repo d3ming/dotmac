@@ -2,6 +2,20 @@
 set -euo pipefail
 
 repo_dir=$(cd "$(dirname "$0")/.." && pwd -P)
+
+# The macOS administration workflow must be discoverable from this repository,
+# not depend on an individual agent's global skill installation.
+skill_file="$repo_dir/.agents/skills/macos-sysadmin/SKILL.md"
+grep -Fq '.agents/skills/macos-sysadmin/SKILL.md' "$repo_dir/AGENTS.md"
+if grep -Fq '~/.codex/skills/macos-sysadmin' "$repo_dir/AGENTS.md"; then
+	printf '%s\n' 'AGENTS.md must use the repository-owned macos-sysadmin skill.' >&2
+	exit 1
+fi
+[[ -f $skill_file ]]
+grep -Eq '^name: macos-sysadmin$' "$skill_file"
+grep -Eq '^description: .+' "$skill_file"
+grep -Fq 'docs/setup-levels.md' "$skill_file"
+
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/dotmac-test.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 fakebin="$tmp/bin"

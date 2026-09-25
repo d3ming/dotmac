@@ -15,7 +15,7 @@ The old `~/dotfiles` checkout and the Notion page linked in the README are refer
 - Review code before execution. Never pipe network content into a shell, run an unreviewed remote script, or use `sudo` for Homebrew.
 - Use maintained tools instead of custom scripts when they meet the need. Prefer `scripts/dotmac` for profile plans, applies, update previews, upgrades, Homebrew inventory, and home-link previews; keep macOS preferences as a separate explicit action. Run `upgrade` only when the user explicitly requests profile updates: it can install missing entries as well as upgrade selected entries, and it never cleans up undeclared packages. Keep machine-specific inventory out of Git. Every added script must have a current, documented purpose, safe reruns, and a way to preview material changes.
 - For scheduled OS automation (cron, LaunchAgents/LaunchDaemons, login or background items), inspect live state and identify the owning repo before acting. These jobs are separate from Homebrew profiles; use their owner's preview/doctor commands and keep vendor jobs inventory-only. Do not copy machine-specific schedules, command arguments, environment values, or logs into this public repo, or load/unload/edit jobs without explicit authorization.
-- Use the personal `macos-sysadmin` skill at `~/.codex/skills/macos-sysadmin` when it exists. An agent on a new Mac should use current Apple, Homebrew, and vendor documentation if that personal skill is not present.
+- For macOS administration, use the repo-owned Codex skill at `.agents/skills/macos-sysadmin/SKILL.md` when available; it is the portable project source, not a personal `~/.codex/skills` dependency. If a future agent cannot load it, follow these instructions and consult current Apple, Homebrew, and vendor documentation.
 
 ## Setup workflow
 
@@ -32,7 +32,7 @@ The optional macOS preferences profile is documented in `docs/macos-preferences.
 - Keep `docs/worklog.md` compact: current goal, completed state, and next action. Update it whenever direction shifts or meaningful setup work finishes.
 - Record lasting choices and their reasons in `docs/decisions.md`. Update the README when the setup path or managed baseline changes.
 - Use `.agent-local/handoff.md` for concise, machine-local handoff between agent sessions: current state, unfinished work, and the next useful action. Create it if absent and update it after meaningful work. It is Git ignored and may be absent on another Mac; keep durable decisions and reusable setup facts in the tracked docs. Never put secrets in it.
-- Improve these instructions and the personal sysadmin skill using concise, dated, evidence-based lessons. Do not add routine command history or unverified general rules.
+- Improve these instructions and the repo-owned `.agents/skills/macos-sysadmin/SKILL.md` using concise, dated, evidence-based lessons. Do not add routine command history or unverified general rules.
 
 ## Steering
 

@@ -2,6 +2,10 @@
 
 Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
 
+## 2026-09-24 — Keep the macOS sysadmin skill project-scoped
+
+Dotmac's administration guidance must not depend on `~/.codex/skills/macos-sysadmin`, which is personal and absent on this machine. Codex's first-party [Agent Skills](https://developers.openai.com/codex/skills) and [Customization](https://developers.openai.com/codex/concepts/customization) docs define repo skills under `.agents/skills/<skill-name>/SKILL.md`; local skills in `dot-agents/master/skills/` use the same `SKILL.md` package shape. Keep the portable `macos-sysadmin` workflow in Dotmac's `.agents/skills/`, route to it from `AGENTS.md`, and guard this discovery contract in `tests/test-dotmac.sh`. Do not create or modify a personal/global skill as part of project work.
+
 ## 2026-09-24 — Separate profile setup, local inventory, and upgrades
 
 `apply` installs missing profile entries without deliberate upgrades and verifies their presence afterward. `outdated` previews only installed entries in a selected profile. `upgrade` explicitly runs Homebrew Bundle for only that profile; because Bundle upgrade also installs missing entries, it is a user-directed action, and it never cleans up undeclared packages. `inventory` prints Homebrew Bundle's machine-specific installed snapshot to stdout without tracking it. Brewfiles remain portable desired state, not a dump of one Mac's installed packages.
