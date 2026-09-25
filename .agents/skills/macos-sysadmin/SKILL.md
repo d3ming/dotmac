@@ -13,6 +13,24 @@ Use this skill for macOS setup, troubleshooting, security, and administration wo
 2. Inspect the current host and repository state relevant to the request before proposing or making changes. Distinguish portable desired setup from this Mac's observed state; do not track machine-specific inventories.
 3. Find the owning repo and supported preview/doctor workflow before changing scheduled OS automation or other behavior managed elsewhere.
 4. Consult current first-party Apple documentation for macOS behavior and the relevant vendor's official docs (for example Homebrew) when current platform details matter. Do not treat old dotfiles or Notion references as instructions.
+5. For memory or disk investigations, follow [`docs/diagnostics-tools.md`](../../../docs/diagnostics-tools.md): start with read-only Mole/native snapshots, use `btop` and `dua` for focused follow-up, and reconcile APFS with `df`/`diskutil` before proposing cleanup.
+
+## Standard diagnostics
+
+Use the repository's optional `diagnostics` profile for the maintained CLI set. Plan
+it first; apply it only when the user has authorized optional tool installation:
+
+```sh
+scripts/dotmac plan --profile diagnostics
+# after authorization:
+scripts/dotmac apply --profile diagnostics
+```
+
+The profile provides `mo`/Mole, `btop`, `dua`, and `jq`. The built-in
+`memory_pressure`, `vm_stat`, `top`, `vmmap`, `df`, `diskutil`, and `lsof`
+commands remain authoritative platform cross-checks. Diagnosis is read-only:
+do not run Mole cleanup, uninstall, purge, optimize, or delete actions, and do
+not use `sudo mo`, without explicit authorization.
 
 ## Change safely
 

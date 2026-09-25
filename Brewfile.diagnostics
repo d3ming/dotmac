@@ -1,0 +1,7 @@
+# Optional read-only-first memory and disk diagnostics.
+# Mole also has destructive maintenance commands; use those only on request and
+# after a dry run. No background services are started by this profile.
+brew "btop"
+brew "dua-cli"
+brew "jq"
+brew "mole"

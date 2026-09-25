@@ -129,6 +129,7 @@ profiles=$("$repo_dir/scripts/dotmac" --json profiles)
 [[ $profiles == *'Rectangle'* ]]
 [[ $profiles == *'1Password'* ]]
 [[ $profiles == *'1Password CLI'* ]]
+[[ $profiles == *'diagnostics'* ]]
 
 plan=$("$repo_dir/scripts/dotmac" --json plan --profile essential)
 [[ $plan == *'"ok":true'* ]]
@@ -140,6 +141,9 @@ grep -q 'skip=.*1password' "$DOTMAC_BREW_LOG"
 
 gui_plan=$("$repo_dir/scripts/dotmac" --json plan --profile gui-apps)
 [[ $gui_plan == *'"ok":true'* ]]
+
+diagnostics_plan=$("$repo_dir/scripts/dotmac" --json plan --profile diagnostics)
+[[ $diagnostics_plan == *'"ok":true'* ]]
 
 dev_plan=$("$repo_dir/scripts/dotmac" --json plan --profile development)
 [[ $dev_plan == *'command op on PATH'* ]]
@@ -226,7 +230,7 @@ fi
 [[ $differing_prefs == *'"status":"different"'* ]]
 
 if command -v ruby >/dev/null 2>&1; then
-	printf '%s\n' "$profiles" "$plan" "$gui_plan" "$dev_plan" "$apply" "$plan_missing" "$install_result" "$install_unverified" "$inventory" "$outdated" "$upgrade_result" "$upgrade_noop" "$check_home" "$home_apply" "$prefs" "$differing_prefs" | ruby -rjson -e 'STDIN.each_line { |line| JSON.parse(line) }'
+	printf '%s\n' "$profiles" "$plan" "$gui_plan" "$diagnostics_plan" "$dev_plan" "$apply" "$plan_missing" "$install_result" "$install_unverified" "$inventory" "$outdated" "$upgrade_result" "$upgrade_noop" "$check_home" "$home_apply" "$prefs" "$differing_prefs" | ruby -rjson -e 'STDIN.each_line { |line| JSON.parse(line) }'
 fi
 
 printf 'dotmac CLI tests passed\n'

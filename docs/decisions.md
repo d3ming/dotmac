@@ -2,6 +2,12 @@
 
 Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
 
+## 2026-09-25 — Standardize read-only memory and disk diagnostics
+
+Use the optional `diagnostics` profile for Mole (`mo`), `btop`, `dua`, and `jq`. Start incidents with `mo status --json`, Apple’s `memory_pressure`/`vm_stat`/`top`, and `df`/`diskutil`; use `mo analyze --json` and `dua aggregate` for focused directory scans. Reconcile APFS snapshots and deleted-but-open files before proposing cleanup. Keep Mole cleanup, GUI visualizers, Apple-Silicon-only telemetry, and experimental `disky` on-demand rather than essential: the first pass must be portable, read-only, and easy for an agent to parse.
+
+Evidence: the 2026-09-25 tool review found Mole strongest as an all-in-one first responder but observed that installed Mole 1.55 returned an empty memory-pressure field on this Mac while native `memory_pressure` worked. `tobi/disktree` is promising for visual exploration but does not replace APFS-level accounting. The detailed workflow is in [`docs/diagnostics-tools.md`](diagnostics-tools.md).
+
 ## 2026-09-24 — Keep the macOS sysadmin skill project-scoped
 
 Dotmac's administration guidance must not depend on `~/.codex/skills/macos-sysadmin`, which is personal and absent on this machine. Codex's first-party [Agent Skills](https://developers.openai.com/codex/skills) and [Customization](https://developers.openai.com/codex/concepts/customization) docs define repo skills under `.agents/skills/<skill-name>/SKILL.md`; local skills in `dot-agents/master/skills/` use the same `SKILL.md` package shape. Keep the portable `macos-sysadmin` workflow in Dotmac's `.agents/skills/`, route to it from `AGENTS.md`, and guard this discovery contract in `tests/test-dotmac.sh`. Do not create or modify a personal/global skill as part of project work.

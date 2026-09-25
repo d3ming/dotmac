@@ -28,12 +28,13 @@ For a Mac that needs more, list profiles with `scripts/dotmac profiles` and sele
 | Profile | Plan / apply | Adds |
 | --- | --- | --- |
 | Development | `scripts/dotmac plan --profile development` / `scripts/dotmac apply --profile development` | CLI helpers, pnpm, Poetry, and 1Password CLI (`op`) |
+| Diagnostics | `scripts/dotmac plan --profile diagnostics` / `scripts/dotmac apply --profile diagnostics` | Mole, btop, dua, and jq for read-only memory/disk triage |
 | GUI apps | `scripts/dotmac plan --profile gui-apps` / `scripts/dotmac apply --profile gui-apps` | Zed and Obsidian |
 | Data and research | `scripts/dotmac plan --profile data` / `scripts/dotmac apply --profile data` | Dolt, DuckDB, ImageMagick, and Poppler |
 
 `plan --profile NAME` checks for missing entries, and `outdated --profile NAME` previews outdated installed entries in that Brewfile. `apply --profile NAME` installs missing entries with Homebrew Bundle `--no-upgrade`, then verifies them with `brew bundle check --no-upgrade`; it does not deliberately upgrade existing packages. Homebrew may still update a dependency when an installation requires it.
 
-`upgrade --profile NAME` explicitly installs missing entries and upgrades outdated dependencies in only that profile; it never removes packages outside the Brewfile. Review `plan` and `outdated` first. `inventory` streams Homebrew Bundle's machine-specific installed manifest to stdout without saving it; it does not capture every Mac app (including unmanaged apps such as Rectangle), and should not be committed to this public repo. Each optional profile assumes the essential level is already installed. Use `scripts/dotmac --json profiles` for machine-readable results, and see [setup levels](docs/setup-levels.md) for selection criteria and backup guidance.
+`upgrade --profile NAME` explicitly installs missing entries and upgrades outdated dependencies in only that profile; it never removes packages outside the Brewfile. Review `plan` and `outdated` first. `inventory` streams Homebrew Bundle's machine-specific installed manifest to stdout without saving it; it does not capture every Mac app (including unmanaged apps such as Rectangle), and should not be committed to this public repo. Each optional profile assumes the essential level is already installed. Use `scripts/dotmac --json profiles` for machine-readable results, see [setup levels](docs/setup-levels.md) for selection criteria and backup guidance, and follow the [standard diagnostics toolkit](docs/diagnostics-tools.md) for memory and disk incidents.
 
 Four current Finder and Dock preferences have a separate [opt-in, previewable profile](docs/macos-preferences.md). Run `scripts/dotmac preferences check` to compare a Mac before choosing `scripts/dotmac preferences apply`. These settings are not part of the essential setup.
 

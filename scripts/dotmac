@@ -17,7 +17,7 @@ Usage:
   scripts/dotmac [--json] preferences check|apply|restore BACKUP_FILE
   scripts/dotmac [--json] --help|--version
 
-Profiles: essential, development, gui-apps, data
+Profiles: essential, development, diagnostics, gui-apps, data
 
 `plan`, `outdated`, `inventory`, and `home check` do not install or upgrade packages.
 `apply` installs missing profile entries without deliberate upgrades.
@@ -70,6 +70,7 @@ profile_file() {
 		development) printf '%s/Brewfile.development\n' "$repo_dir" ;;
 		gui-apps) printf '%s/Brewfile.gui-apps\n' "$repo_dir" ;;
 		data) printf '%s/Brewfile.data\n' "$repo_dir" ;;
+		diagnostics) printf '%s/Brewfile.diagnostics\n' "$repo_dir" ;;
 		*) return 1 ;;
 	esac
 }
@@ -446,7 +447,8 @@ show_profiles() {
 		printf '{"name":"essential","description":"Baseline tools with Rectangle and 1Password"},'
 		printf '{"name":"development","description":"Daily development tools with optional 1Password CLI"},'
 		printf '{"name":"gui-apps","description":"Optional GUI apps: Zed and Obsidian"},'
-		printf '{"name":"data","description":"Data and research tools"}]}'
+		printf '{"name":"data","description":"Data and research tools"},'
+		printf '{"name":"diagnostics","description":"Optional memory and disk diagnostics tools"}]}'
 		printf '\n'
 	else
 		cat <<'EOF'
@@ -455,6 +457,7 @@ Profiles:
   development  Daily development tools with optional 1Password CLI
   gui-apps     Optional GUI apps: Zed and Obsidian
   data         Data and research tools
+  diagnostics  Optional memory and disk diagnostics tools
 EOF
 	fi
 }

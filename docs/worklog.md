@@ -6,15 +6,20 @@ Make Dotmac a portable, layered way to reproduce the current development setup t
 
 ## Known state
 
-- `scripts/dotmac` lists, plans, and applies the `essential`, `development`, `gui-apps`, and `data` profiles; it previews outdated entries, explicitly upgrades one selected profile, and streams a local Homebrew inventory on demand. Package apply post-validates the selected profile. It also previews/applies Stow links and delegates explicit macOS preference actions. JSON output is available with `--json`.
+- `scripts/dotmac` lists, plans, and applies the `essential`, `development`, `diagnostics`, `gui-apps`, and `data` profiles; it previews outdated entries, explicitly upgrades one selected profile, and streams a local Homebrew inventory on demand. Package apply post-validates the selected profile. It also previews/applies Stow links and delegates explicit macOS preference actions. JSON output is available with `--json`.
 - OS-level scheduled automation is outside Dotmac's package profiles. Inspect live cron/launchd/login-item state, find the owning repo, and keep detailed per-Mac inventories out of tracked public docs.
-- The essential Brewfile contains Git, GitHub CLI, GNU Stow, ripgrep, uv, Ghostty, Rectangle, and 1Password. Optional Brewfiles cover development tools (including 1Password CLI), GUI apps (Zed and Obsidian), and data work.
+- The essential Brewfile contains Git, GitHub CLI, GNU Stow, ripgrep, uv, Ghostty, Rectangle, and 1Password. Optional Brewfiles cover development tools (including 1Password CLI), read-only-first diagnostics (Mole, btop, dua, and jq), GUI apps (Zed and Obsidian), and data work.
 - Dotmac now defines seven managed home files, including portable Git and Ghostty defaults. On **this** Mac they are not linked: a 2026-09-23 Stow preview found conflicts with the current Zsh files and old-dotfiles Git/Vim links. `.editorconfig` and `.inputrc` are absent. The earlier linked-files claim was stale. Ghostty's separate macOS config may override the managed XDG file until migrated.
 - The repository is hosted publicly at https://github.com/d3ming/dotmac. GitHub secret scanning and push protection were enabled at initial publish, when alert count was zero; that alert count has not been rechecked in this update. GitHub Actions runs Gitleaks for pushes, pull requests, and manual scans; `.agent-local/` remains excluded from Git.
+- The optional `diagnostics` profile and `docs/diagnostics-tools.md` standardize read-only-first memory/disk triage around Mole, btop, dua, jq, and native macOS commands. No profile apply or cleanup was run.
 - The README gives one clone command, one local Codex setup path, and a reusable prompt that uses the Dotmac CLI for the essential level. `docs/setup-levels.md` explains profiles and safe backup scope. The project-owned macOS administration skill now lives at `.agents/skills/macos-sysadmin/SKILL.md`; `AGENTS.md` points there instead of a personal skill path, and `tests/test-dotmac.sh` protects discovery (passed, as did Bash syntax, Brewfile Ruby syntax, and `git diff --check`).
 - `AGENTS.md` now tells agents to commit and push completed, publishable changes by default, then check CI and security scans.
 - The current Mac's Git config still links to the old dotfiles checkout; its aliases and ignore rules need a separate review before migration. Zed, shell, and macOS preferences are prioritized backup candidates, not automatically copied.
 - Four current Finder/Dock choices now have an opt-in `scripts/macos-preferences` check/apply/restore path. It is not part of essential setup and has not been applied to this Mac.
+
+## Completed on this Mac — 2026-09-25
+
+- Standardized the memory and disk diagnostic toolkit in a new optional `diagnostics` Brewfile/profile, the repo-owned macOS skill, `AGENTS.md`, README, setup guide, and `docs/diagnostics-tools.md`. Added tests for profile discovery and planning. The workflow starts with read-only Mole/native snapshots, uses btop/dua for focused follow-up, and reconciles APFS snapshots or deleted-open files before any cleanup. No tools were installed or upgraded.
 
 ## Completed on this Mac — 2026-09-24
 
@@ -37,4 +42,4 @@ Make Dotmac a portable, layered way to reproduce the current development setup t
 
 ## Next action
 
-Use `scripts/dotmac plan --profile essential` on an unrestricted Mac before setup; apply only as part of an explicitly authorized setup. Rectangle is already present but unmanaged on this Mac, so the CLI skips it without adopting it. Preserve the known Stow conflicts before any `home apply`. Review the current shell and Git aliases separately before migrating them.
+Use `scripts/dotmac plan --profile essential` on an unrestricted Mac before setup; apply only as part of an explicitly authorized setup. Use `scripts/dotmac plan --profile diagnostics` when memory or disk triage is needed; apply it only when the user authorizes optional tool installation. Rectangle is already present but unmanaged on this Mac, so the CLI skips it without adopting it. Preserve the known Stow conflicts before any `home apply`. Review the current shell and Git aliases separately before migrating them.
