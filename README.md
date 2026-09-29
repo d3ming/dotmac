@@ -39,3 +39,7 @@ For a Mac that needs more, list profiles with `scripts/dotmac profiles` and sele
 Four current Finder and Dock preferences have a separate [opt-in, previewable profile](docs/macos-preferences.md). Run `scripts/dotmac preferences check` to compare a Mac before choosing `scripts/dotmac preferences apply`. These settings are not part of the essential setup.
 
 GitHub Actions scans pushes and pull requests with Gitleaks. GitHub secret scanning and push protection are enabled; see [secret scanning](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning) and [push protection](https://docs.github.com/en/code-security/concepts/secret-security/push-protection).
+
+## Local LLM experiments
+
+The opt-in [Promptfoo harness](evals/local-llm/README.md) compares local Ollama models on small workflow tasks and a native tool-call probe. It uses deterministic grading, serial calls, and ignored local results; it does not change agent defaults or execute generated code/tools. Promptfoo and model downloads are not part of the essential setup.

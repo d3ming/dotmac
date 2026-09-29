@@ -2,6 +2,12 @@
 
 Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
 
+## 2026-09-29 — Evaluate local models before choosing workflow roles
+
+Use the opt-in [Promptfoo harness](../evals/local-llm/README.md), not another custom benchmark runner, for small shared Ollama tests. Keep calls loopback-only and serial, with fixed context/decoding settings, per-request unloading, deterministic grading, and ignored local results. Do not add model graders, cloud calls, tool execution, or an essential package/profile requirement. Keep agent defaults unchanged until a real workflow earns adoption.
+
+Evidence: the first matched run exposed different content, formatting, and native-tool behavior across candidate artifacts; a larger model did not automatically satisfy the strict output contract. Promptfoo's tested Ollama provider did not forward per-test tool settings, so the native-call suite places schemas in provider config and rejects text imitations. The thirteen prerecorded checks validate grading independently of inference. Fixed-seed repetitions and cold-start timings are smoke-test evidence, not a model/runtime ranking or a warm-performance claim.
+
 ## 2026-09-25 — Standardize read-only memory and disk diagnostics
 
 Use the optional `diagnostics` profile for Mole (`mo`), `btop`, `dua`, and `jq`. Start incidents with `mo status --json`, Apple’s `memory_pressure`/`vm_stat`/`top`, and `df`/`diskutil`; use `mo analyze --json` and `dua aggregate` for focused directory scans. Reconcile APFS snapshots and deleted-but-open files before proposing cleanup. Keep Mole cleanup, GUI visualizers, Apple-Silicon-only telemetry, and experimental `disky` on-demand rather than essential: the first pass must be portable, read-only, and easy for an agent to parse.

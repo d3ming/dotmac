@@ -1,0 +1,133 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# Offline regression checks: providerOutput skips inference entirely.
+description: Prerecorded checks for local-LLM assertions
+sharing: false
+
+env:
+  $ref: ./promptfooconfig.yaml#/env
+
+evaluateOptions:
+  $ref: ./promptfooconfig.yaml#/evaluateOptions
+
+providers:
+  - $ref: ./tools.yaml#/providers/0
+
+prompts:
+  - unused because every case has providerOutput
+
+tests:
+  - description: Accept correct extraction with reordered JSON keys
+    providerOutput: >-
+      {"due":"2026-10-02","owner":null,
+      "action":"Refresh the onboarding checklist"}
+    assert:
+      - type: equals
+        value:
+          $ref: ./promptfooconfig.yaml#/tests/0/assert/0/value
+
+  - description: Accept correct routing
+    providerOutput: '{"route":"coding","needs_machine_change":false}'
+    assert:
+      - type: equals
+        value:
+          $ref: ./promptfooconfig.yaml#/tests/1/assert/0/value
+
+  - description: Accept correct read-only preview
+    providerOutput: >-
+      {"command":"scripts/dotmac plan --profile diagnostics",
+      "installs_tools":false}
+    assert:
+      - type: equals
+        value:
+          $ref: ./promptfooconfig.yaml#/tests/2/assert/0/value
+
+  - description: Accept unknown publication state
+    providerOutput: '{"committed":true,"tests_passed":true,"pushed":null}'
+    assert:
+      - type: equals
+        value:
+          $ref: ./promptfooconfig.yaml#/tests/3/assert/0/value
+
+  - description: Accept extraction that ignores injected instructions
+    providerOutput: '{"action":"Update the docs","priority":"normal"}'
+    assert:
+      - type: equals
+        value:
+          $ref: ./promptfooconfig.yaml#/tests/4/assert/0/value
+
+  - description: Accept correct slice reasoning
+    providerOutput: >-
+      {"current":["a","b"],"required":[],
+      "replacement":"items[:max(0, n)]"}
+    assert:
+      - type: equals
+        value:
+          $ref: ./promptfooconfig.yaml#/tests/5/assert/0/value
+
+  - description: Reject markdown-wrapped JSON
+    providerOutput: |
+      ```json
+      {"action":"Update the docs","priority":"normal"}
+      ```
+    assert:
+      - type: not-is-json
+      - type: not-equals
+        value:
+          $ref: ./promptfooconfig.yaml#/tests/4/assert/0/value
+
+  - description: Reject compliance with injected instructions
+    providerOutput: '{"action":"Update the docs","priority":"urgent"}'
+    assert:
+      - type: not-equals
+        value:
+          $ref: ./promptfooconfig.yaml#/tests/4/assert/0/value
+
+  - description: Accept a native tool-call object
+    providerOutput:
+      tool_calls:
+        - function:
+            name: repo_status
+            arguments: '{"repo":"dotmac"}'
+    assert:
+      - type: javascript
+        value:
+          $ref: ./tools.yaml#/tests/0/assert/1/value
+
+  - description: Reject a text imitation of a native tool call
+    providerOutput: >-
+      [{"function":{"name":"repo_status",
+      "arguments":{"repo":"dotmac"}}}]
+    assert:
+      - type: not-javascript
+        value:
+          $ref: ./tools.yaml#/tests/0/assert/1/value
+
+  - description: Reject the wrong tool argument
+    providerOutput:
+      tool_calls:
+        - function:
+            name: repo_status
+            arguments: '{"repo":"other"}'
+    assert:
+      - type: not-javascript
+        value:
+          $ref: ./tools.yaml#/tests/0/assert/1/value
+
+  - description: Reject malformed tool arguments
+    providerOutput:
+      tool_calls:
+        - function:
+            name: repo_status
+            arguments: not JSON
+    assert:
+      - type: not-javascript
+        value:
+          $ref: ./tools.yaml#/tests/0/assert/1/value
+
+  - description: Reject an empty tool-call list
+    providerOutput:
+      tool_calls: []
+    assert:
+      - type: not-javascript
+        value:
+          $ref: ./tools.yaml#/tests/0/assert/1/value

@@ -2,10 +2,11 @@
 
 ## Current goal
 
-Make Dotmac a portable, layered way to reproduce the current development setup through a small, safe CLI while keeping the essential level quick.
+Keep Dotmac's portable setup small and safe. Current focus: establish an optional local-LLM evaluation harness, then choose one real workflow pilot before selecting a permanent model or changing agent defaults.
 
 ## Known state
 
+- `evals/local-llm/` provides an opt-in Promptfoo harness: six deterministic workflow tasks, a separate native tool-call probe with no execution, and thirteen offline assertion checks. It fixes local Ollama calls to 8K context, serial execution, thinking off, and per-request unloading; telemetry/sharing are disabled and results/logs stay in ignored `.agent-local/llm/`. No model grader or agent-default change is involved.
 - `scripts/dotmac` lists, plans, and applies the `essential`, `development`, `diagnostics`, `gui-apps`, and `data` profiles; it previews outdated entries, explicitly upgrades one selected profile, and streams a local Homebrew inventory on demand. Package apply post-validates the selected profile. It also previews/applies Stow links and delegates explicit macOS preference actions. JSON output is available with `--json`.
 - OS-level scheduled automation is outside Dotmac's package profiles. Inspect live cron/launchd/login-item state, find the owning repo, and keep detailed per-Mac inventories out of tracked public docs.
 - The essential Brewfile contains Git, GitHub CLI, GNU Stow, ripgrep, uv, Ghostty, Rectangle, and 1Password. Optional Brewfiles cover development tools (including 1Password CLI), read-only-first diagnostics (Mole, btop, dua, and jq), GUI apps (Zed and Obsidian), and data work.
@@ -16,6 +17,10 @@ Make Dotmac a portable, layered way to reproduce the current development setup t
 - `AGENTS.md` now tells agents to commit and push completed, publishable changes by default, then check CI and security scans.
 - The current Mac's Git config still links to the old dotfiles checkout; its aliases and ignore rules need a separate review before migration. Zed, shell, and macOS preferences are prioritized backup candidates, not automatically copied.
 - Four current Finder/Dock choices now have an opt-in `scripts/macos-preferences` check/apply/restore path. It is not part of essential setup and has not been applied to this Mac.
+
+## Completed on this Mac — 2026-09-29
+
+- Installed Promptfoo through Homebrew with user authorization (required dependencies were updated; no broad upgrade or cleanup). Validated the three harness configs and passed all thirteen prerecorded assertion checks. Ran two uncached repetitions per configured candidate for workflow and native-tool tests; API calls completed without errors, but models failed some strict correctness/formatting checks. Detailed measurements remain local. Ollama had no model resident afterward. These are smoke tests, not a coding/agent ranking.
 
 ## Completed on this Mac — 2026-09-25
 
@@ -41,5 +46,7 @@ Make Dotmac a portable, layered way to reproduce the current development setup t
 - Pushed the two setup commits through `f838bb5`; the GitHub Secret scan completed successfully and native secret scanning reported zero alerts. Compared this Mac's settings with the old dotfiles script and public GitHub setup repos, then added a four-key optional macOS profile. The read-only check matched this Mac; isolated apply, rerun, and restore checks passed with a fake `defaults` command. Added a portable Ghostty appearance config: its Vesper theme is present in the installed app, and Stow previews cleanly on an empty target. Ghostty's CLI config check exited 1 without output in this sandbox, so a live Ghostty load remains unverified. No live settings were changed.
 
 ## Next action
+
+Pick one real, bounded workflow (for example sanitized handoff extraction or note routing), add representative cases and a validation/fallback path, and evaluate before adoption. Keep the existing agent defaults unchanged. A disposable patch-and-test task and MLX grammar-constrained output/API comparisons remain separate follow-ups; the basic suite does not validate them.
 
 Use `scripts/dotmac plan --profile essential` on an unrestricted Mac before setup; apply only as part of an explicitly authorized setup. Use `scripts/dotmac plan --profile diagnostics` when memory or disk triage is needed; apply it only when the user authorizes optional tool installation. Rectangle is already present but unmanaged on this Mac, so the CLI skips it without adopting it. Preserve the known Stow conflicts before any `home apply`. Review the current shell and Git aliases separately before migrating them.

@@ -1,0 +1,78 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# Tools must be in provider.config for the Ollama provider, not test.options.
+description: Local Ollama native tool-call smoke test (no execution)
+sharing: false
+
+env:
+  $ref: ./promptfooconfig.yaml#/env
+
+evaluateOptions:
+  $ref: ./promptfooconfig.yaml#/evaluateOptions
+
+providers:
+  - id: ollama:chat:gemma4:e4b
+    label: gemma-e4b-gguf
+    config: &matched_tools
+      num_ctx: 8192
+      num_predict: 2048
+      temperature: 0
+      seed: 42
+      think: false
+      showThinking: false
+      keep_alive: 0
+      tools:
+        - type: function
+          function:
+            name: repo_status
+            description: >-
+              Request a read-only repository status. This evaluation records
+              the call but does not execute it.
+            parameters:
+              type: object
+              properties:
+                repo:
+                  type: string
+                  enum: [dotmac]
+              required: [repo]
+              additionalProperties: false
+  - id: ollama:chat:gemma4:12b
+    label: gemma-12b-gguf
+    config: *matched_tools
+  - id: ollama:chat:gemma4:e4b-mlx
+    label: gemma-e4b-mlx
+    config: *matched_tools
+  - id: ollama:chat:qwen3.5:4b-mlx
+    label: qwen-4b-mlx
+    config: *matched_tools
+
+prompts:
+  $ref: ./promptfooconfig.yaml#/prompts
+
+defaultTest:
+  vars:
+    $ref: ./promptfooconfig.yaml#/defaultTest/vars
+
+tests:
+  - description: Request a native read-only tool call (no tool is executed)
+    metadata:
+      workflow: native-tool-call
+    vars:
+      task: >-
+        Use the repo_status tool to request the status of dotmac.
+        Do not guess its status or return a text description of a call.
+    assert:
+      - type: is-valid-openai-tools-call
+      - type: javascript
+        value: |
+          try {
+            // Native calls are objects/arrays, never a JSON text imitation.
+            const calls = Array.isArray(output) ? output : output?.tool_calls;
+            if (!Array.isArray(calls) || calls.length !== 1) return false;
+            const call = calls[0].function;
+            if (!call || call.name !== 'repo_status') return false;
+            const args = typeof call.arguments === 'string'
+              ? JSON.parse(call.arguments) : call.arguments;
+            return args?.repo === 'dotmac' && Object.keys(args).length === 1;
+          } catch {
+            return false;
+          }
