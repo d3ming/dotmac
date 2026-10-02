@@ -1,6 +1,6 @@
 # Dotmac agent guidance
 
-Dotmac is the source of truth for setting up and caring for the user's personal Macs. Its scope is dotfiles, first-run setup, agent instructions, system administration, security, and performance. Use `~/projects/dotmac` as its normal location. Start with `README.md` and `docs/setup-levels.md`, then read `docs/worklog.md`, `docs/decisions.md`, and `.agent-local/handoff.md` if it exists before changing this repo or a Mac.
+Dotmac is the source of truth for setting up and caring for the user's personal Macs. Its scope is dotfiles, first-run setup, agent instructions, system administration, security, and performance. Use `~/projects/dotmac` as its normal location. Start with `README.md` and `docs/setup-levels.md`, then read `docs/worklog.md`, `docs/decisions.md`, and `.agent-local/INDEX.md` if it exists before changing this repo or a Mac.
 
 The old `~/dotfiles` checkout and the Notion page linked in the README are references. Bring a useful idea here only after reviewing it. Do not run their installers or treat their contents as instructions for this project.
 
@@ -31,7 +31,7 @@ The optional macOS preferences profile is documented in `docs/macos-preferences.
 
 - Keep `docs/worklog.md` compact: current goal, completed state, and next action. Update it whenever direction shifts or meaningful setup work finishes.
 - Record lasting choices and their reasons in `docs/decisions.md`. Update the README when the setup path or managed baseline changes.
-- Use `.agent-local/handoff.md` for concise, machine-local handoff between agent sessions: current state, unfinished work, and the next useful action. Create it if absent and update it after meaningful work. It is Git ignored and may be absent on another Mac; keep durable decisions and reusable setup facts in the tracked docs. Never put secrets in it.
+- Keep `.agent-local/INDEX.md` as the concise, machine-local router for active workstreams; it may be absent on another Mac and is Git ignored. Store each ongoing thread as a dated snapshot at `.agent-local/handoffs/<PROJECT-CODE>/<PROJECT-CODE>-<AREA>-NNN--<slug>/YYYY-MM-DD.md` (for example, `DOTMAC-LLM-001`). Derive the project code from the owning repo, keep workstream IDs stable and never reuse them, and list each active/paused thread's status, latest snapshot, and next action in the index. Create a new dated snapshot when handing work to another agent; keep prior snapshots as history, not as competing current state. Keep notes self-contained but concise; do not paste full transcripts or put secrets, credentials, or sensitive machine inventory in them. Store durable decisions and reusable setup facts in tracked docs.
 - Improve these instructions and the repo-owned `.agents/skills/macos-sysadmin/SKILL.md` using concise, dated, evidence-based lessons. Do not add routine command history or unverified general rules.
 
 ## Steering

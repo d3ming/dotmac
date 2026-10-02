@@ -8,6 +8,12 @@ Use the opt-in [Promptfoo harness](../evals/local-llm/README.md), not another cu
 
 Evidence: the first matched run exposed different content, formatting, and native-tool behavior across candidate artifacts; a larger model did not automatically satisfy the strict output contract. Promptfoo's tested Ollama provider did not forward per-test tool settings, so the native-call suite places schemas in provider config and rejects text imitations. The thirteen prerecorded checks validate grading independently of inference. Fixed-seed repetitions and cold-start timings are smoke-test evidence, not a model/runtime ranking or a warm-performance claim.
 
+## 2026-09-29 — Use dated, project-coded local handoffs
+
+Keep ignored `.agent-local/INDEX.md` as a short router to active workstreams. Give each ongoing investigation a stable project/workstream code (derived from its owning repo, such as `DOTMAC-LLM-001`) and store dated snapshots under `.agent-local/handoffs/<PROJECT-CODE>/<PROJECT-CODE>-<AREA>-NNN--<slug>/YYYY-MM-DD.md`. The index records status, latest snapshot, and next action; IDs are never reused, and older snapshots remain historical rather than competing with current state. Each repository owns its own local notes. Keep transcripts, secrets, credentials, and sensitive machine inventories out of handoffs; put durable reusable decisions in tracked docs.
+
+Evidence: the prior single ignored handoff had grown into a long chronological mix of unrelated workstreams and historical host state, making it hard to route a new agent. A small index plus scoped, dated snapshots makes concurrent threads discoverable while retaining useful handoff history.
+
 ## 2026-09-25 — Standardize read-only memory and disk diagnostics
 
 Use the optional `diagnostics` profile for Mole (`mo`), `btop`, `dua`, and `jq`. Start incidents with `mo status --json`, Apple’s `memory_pressure`/`vm_stat`/`top`, and `df`/`diskutil`; use `mo analyze --json` and `dua aggregate` for focused directory scans. Reconcile APFS snapshots and deleted-but-open files before proposing cleanup. Keep Mole cleanup, GUI visualizers, Apple-Silicon-only telemetry, and experimental `disky` on-demand rather than essential: the first pass must be portable, read-only, and easy for an agent to parse.
@@ -88,4 +94,4 @@ The `p` alias targets lowercase `~/projects`, so the bootstrap flow creates it w
 
 ## 2026-09-23 — Put Dotmac under projects and keep local agent handoff outside Git
 
-The normal checkout location is `~/projects/dotmac`, under the directory opened by `p`. The setup instructions create `~/projects` before cloning. Agents keep a concise `.agent-local/handoff.md` for session-specific context; Git ignores that directory. The tracked worklog and decisions remain the durable source for future Macs, because ignored files do not travel with a clone.
+The normal checkout location is `~/projects/dotmac`, under the directory opened by `p`. The setup instructions create `~/projects` before cloning. Agent handoffs live in ignored `.agent-local/` so machine-local session context does not enter Git; the tracked worklog and decisions remain the durable source for future Macs, because ignored files do not travel with a clone. The dated project/workstream index convention is recorded in the 2026-09-29 decision above.

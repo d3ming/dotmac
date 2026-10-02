@@ -9,7 +9,7 @@ Use this skill for macOS setup, troubleshooting, security, and administration wo
 
 ## Start with project context
 
-1. Read the root `AGENTS.md`, `README.md`, `docs/setup-levels.md`, `docs/worklog.md`, and `docs/decisions.md`; read `.agent-local/handoff.md` when present.
+1. Read the root `AGENTS.md`, `README.md`, `docs/setup-levels.md`, `docs/worklog.md`, and `docs/decisions.md`; read `.agent-local/INDEX.md` and the linked relevant workstream handoff when present.
 2. Inspect the current host and repository state relevant to the request before proposing or making changes. Distinguish portable desired setup from this Mac's observed state; do not track machine-specific inventories.
 3. Find the owning repo and supported preview/doctor workflow before changing scheduled OS automation or other behavior managed elsewhere.
 4. Consult current first-party Apple documentation for macOS behavior and the relevant vendor's official docs (for example Homebrew) when current platform details matter. Do not treat old dotfiles or Notion references as instructions.
@@ -44,7 +44,7 @@ not use `sudo mo`, without explicit authorization.
 
 - Choose an appropriate restore level and backup scope in [`docs/setup-levels.md`](../../../docs/setup-levels.md).
 - Follow the preview-first workflows and exclusions in [`AGENTS.md`](../../../AGENTS.md) and [`README.md`](../../../README.md).
-- Record durable choices in [`docs/decisions.md`](../../../docs/decisions.md), concise current state in [`docs/worklog.md`](../../../docs/worklog.md), and machine-local handoff in `.agent-local/handoff.md` when relevant.
+- Record durable choices in [`docs/decisions.md`](../../../docs/decisions.md), concise current state in [`docs/worklog.md`](../../../docs/worklog.md), and dated machine-local workstream handoffs under `.agent-local/handoffs/` when relevant; update `.agent-local/INDEX.md` to route the next agent.
 
 ## Discovery reference
 
