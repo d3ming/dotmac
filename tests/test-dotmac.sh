@@ -239,8 +239,38 @@ if differing_prefs=$(MOCK_DEFAULTS_MISMATCH=1 DOTMAC_DEFAULTS_CMD="$fakebin/defa
 fi
 [[ $differing_prefs == *'"status":"different"'* ]]
 
+# disk snapshot/diff: a fake dua reports sizes that grow between snapshots.
+cat > "$fakebin/dua" <<'EOF'
+#!/bin/bash
+scale=${MOCK_DUA_SCALE:-1}
+printf '%s b /h/a\n' $((1073741824 * scale))
+printf '%s b /h/b dir <2 IO Errors>\n' 2147483648
+printf '%s b total <2 IO Errors>\n' $((1073741824 * scale + 2147483648))
+EOF
+chmod +x "$fakebin/dua"
+export DOTMAC_DISK_DIR="$tmp/disk"
+snap1=$("$repo_dir/scripts/dotmac" --json disk snapshot /h)
+[[ $snap1 == *'"ok":true'* ]]
+sleep 1
+snap2=$(MOCK_DUA_SCALE=4 "$repo_dir/scripts/dotmac" --json disk snapshot /h)
+[[ $snap2 == *'"ok":true'* ]]
+newest=$(ls -1 "$DOTMAC_DISK_DIR"/*.tsv | tail -1)
+grep -Fq $'2147483648\t/h/b dir' "$newest"
+if grep -q 'total' "$newest"; then
+	printf 'snapshot must drop the dua total line\n' >&2
+	exit 1
+fi
+disk_diff=$("$repo_dir/scripts/dotmac" disk diff)
+[[ $disk_diff == *'free space change:'* ]]
+[[ $disk_diff == *'+3.00 GB'*'/h/a'* ]]
+if [[ $disk_diff == *'/h/b dir'* ]]; then
+	printf 'unchanged paths must not appear in disk diff\n' >&2
+	exit 1
+fi
+disk_diff_json=$("$repo_dir/scripts/dotmac" --json disk diff)
+
 if command -v ruby >/dev/null 2>&1; then
-	printf '%s\n' "$profiles" "$plan" "$gui_plan" "$diagnostics_plan" "$dev_plan" "$apply" "$plan_missing" "$install_result" "$install_unverified" "$inventory" "$outdated" "$upgrade_result" "$upgrade_noop" "$check_home" "$home_apply" "$home_reapply" "$prefs" "$differing_prefs" | ruby -rjson -e 'STDIN.each_line { |line| JSON.parse(line) }'
+	printf '%s\n' "$profiles" "$plan" "$gui_plan" "$diagnostics_plan" "$dev_plan" "$apply" "$plan_missing" "$install_result" "$install_unverified" "$inventory" "$outdated" "$upgrade_result" "$upgrade_noop" "$check_home" "$home_apply" "$home_reapply" "$prefs" "$differing_prefs" "$snap1" "$snap2" "$disk_diff_json" | ruby -rjson -e 'STDIN.each_line { |line| JSON.parse(line) }'
 fi
 
 printf 'dotmac CLI tests passed\n'

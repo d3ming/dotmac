@@ -15,6 +15,8 @@ Usage:
   scripts/dotmac [--json] inventory
   scripts/dotmac [--json] home check|apply
   scripts/dotmac [--json] preferences check|apply|restore BACKUP_FILE
+  scripts/dotmac [--json] disk snapshot [PATH...]
+  scripts/dotmac [--json] disk diff [OLD NEW]
   scripts/dotmac [--json] --help|--version
 
 Profiles: essential, development, diagnostics, gui-apps, data
@@ -24,6 +26,10 @@ Profiles: essential, development, diagnostics, gui-apps, data
 `upgrade` installs missing and upgrades outdated entries in only that profile;
 it never removes undeclared packages. Home links are previewed first.
 macOS preferences remain a separate, explicit action.
+`disk snapshot` records per-directory usage (depth 2, via dua) for $HOME and
+the user temp directory into .agent-local/disk/ (override DOTMAC_DISK_DIR);
+`disk diff` compares the two newest snapshots, or OLD and NEW. Both are
+read-only for the scanned paths.
 EOF
 }
 
@@ -447,6 +453,65 @@ inventory_command() {
 	fi
 }
 
+disk_dir() {
+	printf '%s' "${DOTMAC_DISK_DIR:-$repo_dir/.agent-local/disk}"
+}
+
+disk_snapshot() {
+	command -v dua >/dev/null 2>&1 || fail 'dua not found; run scripts/dotmac apply --profile diagnostics' 3
+	local dir stamp out paths=("$@") tmpdir
+	dir=$(disk_dir)
+	if ((${#paths[@]} == 0)); then
+		tmpdir=$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || printf '%s' "${TMPDIR:-}")
+		paths=("$HOME")
+		[[ -n $tmpdir && -d $tmpdir ]] && paths+=("${tmpdir%/}")
+	fi
+	mkdir -p "$dir"
+	stamp=$(date +%Y%m%dT%H%M%S)
+	out="$dir/$stamp.tsv"
+	{
+		printf '# dotmac disk snapshot %s\n' "$stamp"
+		printf '# free_kb\t%s\n' "$(df -k "$HOME" | awk 'NR==2{print $4}')"
+		# dua lines look like "BYTES b PATH <N IO Errors>"; keep bytes and path.
+		dua --format bytes aggregate --depth 2 "${paths[@]}" 2>/dev/null \
+			| sed -E 's/ +<[0-9]+ IO Errors?>$//' \
+			| awk '$2 == "b" && $3 != "total" { b=$1; $1=""; $2=""; sub(/^  /, ""); printf "%s\t%s\n", b, $0 }'
+	} > "$out.partial"
+	mv "$out.partial" "$out"
+	result true disk-snapshot "$out" saved 0 "snapshot: $out ($(($(wc -l < "$out") - 2)) entries)"
+}
+
+disk_diff() {
+	local dir old new
+	dir=$(disk_dir)
+	if (($# == 2)); then
+		old=$1 new=$2
+	elif (($# == 0)); then
+		new=$(ls -1 "$dir"/*.tsv 2>/dev/null | tail -1 || true)
+		old=$(ls -1 "$dir"/*.tsv 2>/dev/null | tail -2 | head -1 || true)
+		[[ -n $old && $old != "$new" ]] || fail "need two snapshots in $dir" 2
+	else
+		fail 'usage: scripts/dotmac disk diff [OLD NEW]' 2
+	fi
+	[[ -f $old && -f $new ]] || fail "snapshot not found: $old or $new" 2
+	local report
+	report=$(awk -F'\t' '
+		FNR == 1 { file++ }
+		/^# free_kb/ { free[file] = $2; next }
+		/^#/ { next }
+		file == 1 { a[$2] = $1; seen[$2] = 1 }
+		file == 2 { b[$2] = $1; seen[$2] = 1 }
+		END {
+			printf "free space change: %+.1f GB\n", (free[2] - free[1]) / 1048576
+			fflush()
+			for (p in seen) {
+				d = b[p] - a[p]
+				if (d != 0) printf "%d\t%+.2f GB\t%s\n", (d < 0 ? -d : d), d / 1073741824, p | "sort -g -r -k1,1 | head -25 | cut -f2-"
+			}
+		}' "$old" "$new")
+	result true disk-diff "$old -> $new" compared 0 "$report"
+}
+
 show_profiles() {
 	if (( json )); then
 		printf '{"profiles":['
@@ -508,6 +573,17 @@ case $command_name in
 	preferences)
 		if [[ ${1:-} == -h || ${1:-} == --help ]]; then usage; exit 0; fi
 		preferences_command "$@"
+		;;
+	disk)
+		if [[ ${1:-} == -h || ${1:-} == --help ]]; then usage; exit 0; fi
+		(($# >= 1)) || fail 'usage: scripts/dotmac disk snapshot|diff' 2
+		sub=$1
+		shift
+		case $sub in
+			snapshot) disk_snapshot "$@" ;;
+			diff) disk_diff "$@" ;;
+			*) fail "unknown disk command '$sub'" 2 ;;
+		esac
 		;;
 	*) fail "unknown command '$command_name'; run 'scripts/dotmac --help'" 2 ;;
 esac

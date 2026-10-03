@@ -88,6 +88,30 @@ lsof +L1
 `lsof +L1` may need elevated access for a complete result. Do not delete a
 snapshot or an open file as part of the first diagnostic pass.
 
+## Snapshots: know where space went
+
+A one-off scan cannot say what grew. Keep dated snapshots and diff them:
+
+```sh
+scripts/dotmac disk snapshot          # $HOME and the user temp dir, depth 2, via dua
+scripts/dotmac disk diff              # two newest snapshots: free-space change + top 25 movers
+scripts/dotmac disk diff OLD.tsv NEW.tsv
+```
+
+Snapshots are machine-specific, so they go to the ignored `.agent-local/disk/`
+(override with `DOTMAC_DISK_DIR`). They are read-only for the scanned paths.
+Scheduling belongs to the repo that owns this Mac's LaunchAgents, not to this
+public repo.
+
+Two lessons from the 2026-10-03 incident:
+
+- **`du` overstates APFS clones.** `uv` and `pnpm` clone files copy-on-write, so
+  each worktree's `.venv` and `node_modules` looked like 2.2 GB, but removing
+  one freed 115 MB. Before blaming duplicated directories, measure the change
+  in `df` when one is removed, or use a tool that shows physical size.
+- **Check the user temp dir** (`getconf DARWIN_USER_TEMP_DIR`). It is not under
+  `$HOME`, and it held 16.6 GB of leaked temporary git stores.
+
 ## Visual tools and alternatives
 
 These are useful on demand, but are not part of the default CLI profile:

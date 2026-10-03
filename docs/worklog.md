@@ -19,6 +19,11 @@ Keep Dotmac's portable setup small and safe. Current focus: establish an optiona
 - The old Holman `~/.dotfiles` checkout is no longer sourced by this Mac's shell or Git config; it remains on disk as a reference. Promoting pieces of `~/.zshrc.local` (fzf, `codex-as`, venv hook) is deferred. Zed and macOS preferences remain prioritized backup candidates, not automatically copied.
 - Four current Finder/Dock choices now have an opt-in `scripts/macos-preferences` check/apply/restore path. It is not part of essential setup and has not been applied to this Mac.
 
+## Completed on this Mac — 2026-10-03
+
+- Disk-space incident: free space fell from about 163 GiB (2026-09-25) to 13 GiB. Removed 50 leaked temporary git stores (16.6 GiB) from the user temp dir; each was a full copy of `~/.hermes`, and the creator is not yet identified. Removing one Claude subagent worktree freed only 115 MB, so worktrees share dependencies through APFS clones as intended. About 70 GiB of growth is accounted for (Ollama models, the Claude desktop VM, agent homes, caches); the rest needs a snapshot diff to find.
+- Added `scripts/dotmac disk snapshot|diff` (dua-based, output in `.agent-local/disk/`) with tests. Installed `dua-cli`. dm.core schedules a weekly snapshot and a per-minute guard that traps and cleans leaked temporary git stores; see its `agents/launchd/`.
+
 ## Completed on this Mac — 2026-10-02
 
 - Migrated home config from the old Holman dotfiles to Dotmac with user approval. Backed up every replaced file (and link target) outside the repo, moved the originals aside, created real `~/.gitconfig.local` and `~/.zshrc.local`, then ran `home check` and `home apply`; all eight links were created with no conflicts. Shell parity was checked first with a scratch `ZDOTDIR`. Verified HTTPS `git push --dry-run` through the gh credential helper, global ignore matching, `git log` through the pager, vim loading `~/.vimrc`, and an interactive login zsh in a TTY with no startup errors.
