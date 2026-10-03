@@ -472,10 +472,18 @@ disk_snapshot() {
 	{
 		printf '# dotmac disk snapshot %s\n' "$stamp"
 		printf '# free_kb\t%s\n' "$(df -k "$HOME" | awk 'NR==2{print $4}')"
-		# dua lines look like "BYTES b PATH <N IO Errors>"; keep bytes and path.
-		dua --format bytes aggregate --depth 2 "${paths[@]}" 2>/dev/null \
-			| sed -E 's/ +<[0-9]+ IO Errors?>$//' \
-			| awk '$2 == "b" && $3 != "total" { b=$1; $1=""; $2=""; sub(/^  /, ""); printf "%s\t%s\n", b, $0 }'
+		# dua --depth prints an indented tree ("BYTES b <2 spaces per level>NAME"),
+		# sometimes with "<N IO Errors>"; rebuild full paths from the indent. dua
+		# exits non-zero on unreadable files, which is normal for $HOME. With a
+		# single input dua lists its children at the top level, so prefix them.
+		{ dua --format bytes aggregate --no-total --depth 3 "${paths[@]}" 2>/dev/null || true; } \
+			| awk -v root="$( ((${#paths[@]} == 1)) && printf '%s' "${paths[0]%/}" )" '{ sub(/ +<[0-9]+ IO Errors?>$/, "") }
+				match($0, /^ *[0-9]+ b /) {
+					b = $1; rest = substr($0, RLENGTH + 1)
+					ind = match(rest, /[^ ]/) - 1; lvl = int(ind / 2); name = substr(rest, ind + 1)
+					p[lvl] = lvl > 0 ? p[lvl - 1] "/" name : root == "" ? name : root "/" name
+					printf "%s\t%s\n", b, p[lvl]
+				}'
 	} > "$out.partial"
 	mv "$out.partial" "$out"
 	result true disk-snapshot "$out" saved 0 "snapshot: $out ($(($(wc -l < "$out") - 2)) entries)"

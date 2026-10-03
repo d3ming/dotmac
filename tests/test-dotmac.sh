@@ -242,10 +242,13 @@ fi
 # disk snapshot/diff: a fake dua reports sizes that grow between snapshots.
 cat > "$fakebin/dua" <<'EOF'
 #!/bin/bash
+# Mimics `dua aggregate --depth` with one input: the input's children as an
+# indented tree, then a non-zero exit for unreadable files.
 scale=${MOCK_DUA_SCALE:-1}
-printf '%s b /h/a\n' $((1073741824 * scale))
-printf '%s b /h/b dir <2 IO Errors>\n' 2147483648
-printf '%s b total <2 IO Errors>\n' $((1073741824 * scale + 2147483648))
+printf '%12s b a\n' $((1073741824 * scale))
+printf '%12s b   deep\n' $((1073741824 * scale))
+printf '%12s b b dir <2 IO Errors>\n' 2147483648
+exit 1
 EOF
 chmod +x "$fakebin/dua"
 export DOTMAC_DISK_DIR="$tmp/disk"
@@ -256,6 +259,7 @@ snap2=$(MOCK_DUA_SCALE=4 "$repo_dir/scripts/dotmac" --json disk snapshot /h)
 [[ $snap2 == *'"ok":true'* ]]
 newest=$(ls -1 "$DOTMAC_DISK_DIR"/*.tsv | tail -1)
 grep -Fq $'2147483648\t/h/b dir' "$newest"
+grep -Fq $'/h/a/deep' "$newest"
 if grep -q 'total' "$newest"; then
 	printf 'snapshot must drop the dua total line\n' >&2
 	exit 1
