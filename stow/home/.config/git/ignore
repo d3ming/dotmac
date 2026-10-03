@@ -1,0 +1,26 @@
+# Global Git ignore rules (Git reads ~/.config/git/ignore when core.excludesFile is unset).
+
+# macOS and editor clutter
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+*~
+*.swp
+
+# Windows thumbnails and folder settings
+Thumbs.db
+Desktop.ini
+
+# Python bytecode
+*.pyc
+
+# IDE project files
+.idea/
+*.iml
+.vscode
+.classpath
+atlassian-ide-plugin.xml
+
+# Per-user Claude Code settings
+**/.claude/settings.local.json

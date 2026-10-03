@@ -1,6 +1,17 @@
 # Portable defaults observed on the source Mac. Keep identity local and credentials in a secure manager.
+# Machine- or account-specific settings (credentials, safe.directory, LFS) belong in ~/.gitconfig.local:
+# write them with `git config --file ~/.gitconfig.local`, because `git config --global` edits this tracked file.
 [core]
 	editor = vim
+	# Use delta (development profile) when installed; fall back to less.
+	pager = "command -v delta >/dev/null 2>&1 && exec delta || exec less"
+	fsmonitor = false
+[delta]
+	navigate = true
+	side-by-side = true
+	line-numbers = true
+[color]
+	ui = auto
 [init]
 	defaultBranch = main
 [pull]
@@ -9,7 +20,40 @@
 	autoStash = true
 [push]
 	default = simple
+[apply]
+	whitespace = nowarn
+[mergetool]
+	keepBackup = false
+[difftool]
+	prompt = false
 [help]
 	autoCorrect = 1
+[alias]
+	co = checkout
+	s = status
+	f = fetch
+	count = shortlog -sn
+	ll = log --stat --abbrev-commit
+	lo = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+	conflicts = diff --name-only --diff-filter=U
+	# aidiff: plain, uncolored diff for pasting into tools
+	aidiff = !git --no-pager diff --unified=3 --color=never
+	# cam: stage everything, then open a verbose commit
+	cam = !git add --all && git commit --verbose
+	# poh: push current HEAD to origin
+	poh = push origin HEAD
+	pushf = push --force-with-lease
+	# rom/rbo: rebase current branch onto origin/main (rbo is interactive)
+	rom = !git fetch origin && git rebase origin/main --autostash
+	rbo = !git fetch origin && git rebase -i origin/main
+	alias = !git config --list | grep 'alias\\.' | sed 's/alias\\.\\([^=]*\\)=\\(.*\\)/\\1\\\t => \\2/' | sort
+	# Destructive: these discard work or delete branches.
+	rh = reset --hard
+	# rop: require a fully clean worktree, then fetch and hard-reset to origin/main
+	rop = "!status=$(git status --short) && if [ -n \"$status\" ]; then echo 'Aborting: worktree not clean'; echo; echo \"$status\"; exit 1; fi && git fetch origin && git reset --hard origin/main"
+	# db: delete local branches already merged into HEAD
+	db = !git branch --merged | grep -v '*' | xargs -n 1 git branch -d
+	# sweep: delete all local done/* archive branches
+	sweep = "!git for-each-ref --format='%(refname:short)' refs/heads/done/ | while IFS= read -r branch; do git branch -D \"$branch\"; done"
 [include]
 	path = ~/.gitconfig.local
