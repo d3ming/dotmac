@@ -208,11 +208,21 @@ upgrade_noop=$(MOCK_BREW_ALL_INSTALLED=1 "$repo_dir/scripts/dotmac" --json upgra
 check_home=$("$repo_dir/scripts/dotmac" --json home check)
 [[ $check_home == *'"status":"clean"'* ]]
 grep -q '^-n ' "$DOTMAC_STOW_LOG"
+# check stays read-only.
+[[ ! -e $home_dir/.gitconfig ]]
 
 : > "$DOTMAC_STOW_LOG"
 home_apply=$("$repo_dir/scripts/dotmac" --json home apply)
 [[ $home_apply == *'"status":"applied"'* ]]
 [[ $(wc -l < "$DOTMAC_STOW_LOG" | tr -d ' ') == 2 ]]
+# apply creates a private, untracked ~/.gitconfig so `git config --global` never writes into the repo.
+[[ -f $home_dir/.gitconfig && ! -L $home_dir/.gitconfig ]]
+[[ $(stat -f %Lp "$home_dir/.gitconfig") == 600 ]]
+[[ $home_apply == *'Created ~/.gitconfig'* ]]
+printf '[user]\n\tname = Test\n' >> "$home_dir/.gitconfig"
+home_reapply=$("$repo_dir/scripts/dotmac" --json home apply)
+grep -q 'name = Test' "$home_dir/.gitconfig"
+[[ $home_reapply != *'Created ~/.gitconfig'* ]]
 
 : > "$DOTMAC_STOW_LOG"
 if MOCK_STOW_PREVIEW_STATUS=1 "$repo_dir/scripts/dotmac" --json home apply >/dev/null; then
@@ -230,7 +240,7 @@ fi
 [[ $differing_prefs == *'"status":"different"'* ]]
 
 if command -v ruby >/dev/null 2>&1; then
-	printf '%s\n' "$profiles" "$plan" "$gui_plan" "$diagnostics_plan" "$dev_plan" "$apply" "$plan_missing" "$install_result" "$install_unverified" "$inventory" "$outdated" "$upgrade_result" "$upgrade_noop" "$check_home" "$home_apply" "$prefs" "$differing_prefs" | ruby -rjson -e 'STDIN.each_line { |line| JSON.parse(line) }'
+	printf '%s\n' "$profiles" "$plan" "$gui_plan" "$diagnostics_plan" "$dev_plan" "$apply" "$plan_missing" "$install_result" "$install_unverified" "$inventory" "$outdated" "$upgrade_result" "$upgrade_noop" "$check_home" "$home_apply" "$home_reapply" "$prefs" "$differing_prefs" | ruby -rjson -e 'STDIN.each_line { |line| JSON.parse(line) }'
 fi
 
 printf 'dotmac CLI tests passed\n'

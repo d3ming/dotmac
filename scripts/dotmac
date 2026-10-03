@@ -392,6 +392,12 @@ home_command() {
 		return 0
 	fi
 	if applied=$(stow -v -d "$repo_dir/stow" -t "$HOME" home 2>&1); then
+		# Git writes `--global` settings to ~/.config/git/config (tracked here) when ~/.gitconfig
+		# is absent. Keep a private ~/.gitconfig so identity and tool-written settings stay local.
+		if [[ ! -e $HOME/.gitconfig && ! -L $HOME/.gitconfig ]]; then
+			(umask 077 && printf '%s\n' '# Machine- and account-specific Git settings (identity, credentials). Untracked; read after ~/.config/git/config.' > "$HOME/.gitconfig")
+			applied+=$'\nCreated ~/.gitconfig for local Git settings'
+		fi
 		details=$'Preview:\n'"$preview"$'\nApply:\n'"$applied"
 		result true 'home apply' home applied 0 "$details"
 	else

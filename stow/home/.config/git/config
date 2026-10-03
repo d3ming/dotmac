@@ -1,6 +1,6 @@
-# Portable defaults observed on the source Mac. Keep identity local and credentials in a secure manager.
-# Machine- or account-specific settings (credentials, safe.directory, LFS) belong in ~/.gitconfig.local:
-# write them with `git config --file ~/.gitconfig.local`, because `git config --global` edits this tracked file.
+# Portable Git defaults, read from Git's XDG path (~/.config/git/config). Keep identity local.
+# Machine- or account-specific settings (identity, credentials, safe.directory, LFS) belong in the
+# untracked ~/.gitconfig, which Git reads afterward; `git config --global` writes there while it exists.
 [core]
 	editor = vim
 	# Use delta (development profile) when installed; fall back to less.
@@ -55,5 +55,3 @@
 	db = !git branch --merged | grep -v '*' | xargs -n 1 git branch -d
 	# sweep: delete all local done/* archive branches
 	sweep = "!git for-each-ref --format='%(refname:short)' refs/heads/done/ | while IFS= read -r branch; do git branch -D \"$branch\"; done"
-[include]
-	path = ~/.gitconfig.local

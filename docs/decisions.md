@@ -2,6 +2,12 @@
 
 Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
 
+## 2026-10-03 — Manage Git's XDG config; keep ~/.gitconfig local
+
+Dotmac now links `~/.config/git/config` instead of `~/.gitconfig`, and `home apply` creates an empty, private `~/.gitconfig` when absent. Git reads the XDG file first and `~/.gitconfig` second, so local identity and credentials still override portable defaults without an include. `git config --global`, `gh auth setup-git`, and `git lfs install` write to `~/.gitconfig` whenever it exists; with the old layout they wrote through the symlink into this public repo. This supersedes the `~/.gitconfig.local` file and the write-with-`--file` workaround in the 2026-10-02 entry below.
+
+Evidence: in a scratch home, the effective config matched the live one; a `--global` write landed in `~/.gitconfig`, and without that file it landed in the tracked XDG file, which is why apply creates it. Mocked CLI tests cover creation, `0600` mode, read-only check, and preserving an existing file.
+
 ## 2026-10-02 — Split Git and Zsh config into portable Stow files and untracked local files
 
 Dotmac's Stow files hold portable defaults only. `~/.gitconfig` (tracked) holds reviewed aliases, including the destructive `rh`, `rop`, `db`, and `sweep`, and a delta pager that falls back to `less` when the development profile is absent. It includes `~/.gitconfig.local` last. That real, untracked file holds identity, credential helpers (gh for GitHub HTTPS, osxkeychain), `safe.directory`, Git LFS, and service-specific settings. Global ignores use Git's default `~/.config/git/ignore`, so no `core.excludesFile` is needed. Because `git config --global` and installers such as `gh auth setup-git` or `git lfs install` write through the `~/.gitconfig` symlink into this public repo, write machine settings with `git config --file ~/.gitconfig.local` and review `git status` after such tools run. Machine-specific shell setup lives in an untracked `~/.zshrc.local`, sourced last; promote a piece only after reviewing it.

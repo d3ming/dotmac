@@ -21,7 +21,7 @@ Agent-led setup for my personal Macs. Dotmac has a fast essential setup and inde
 
 ## Choose a level
 
-The essential `Brewfile` installs Git, GitHub CLI, GNU Stow, ripgrep, uv, Ghostty (the default terminal), Rectangle for window management, and the 1Password app. Installing 1Password does not sign in or migrate Bitwarden vault data; handle account and vault migration separately. `stow/home` manages Zsh, Vim, EditorConfig, Readline, Git (config and global ignore), and a small Ghostty config. Keep Git identity and signing preferences in the untracked `~/.gitconfig.local`; use a secure credential manager for credentials. Existing conflicting home files must be reviewed and preserved before Stow runs.
+The essential `Brewfile` installs Git, GitHub CLI, GNU Stow, ripgrep, uv, Ghostty (the default terminal), Rectangle for window management, and the 1Password app. Installing 1Password does not sign in or migrate Bitwarden vault data; handle account and vault migration separately. `stow/home` manages Zsh, Vim, EditorConfig, Readline, Git (config and global ignore), and a small Ghostty config. Portable Git defaults live at `~/.config/git/config`; keep Git identity and signing preferences in the untracked `~/.gitconfig`, which `home apply` creates if missing; use a secure credential manager for credentials. Existing conflicting home files must be reviewed and preserved before Stow runs.
 
 For a Mac that needs more, list profiles with `scripts/dotmac profiles` and select only the appropriate one:
 

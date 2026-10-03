@@ -26,7 +26,7 @@ Several installed tools stay out of the default profiles. Docker Desktop, Postgr
 
 | Priority | Candidate | Repo treatment |
 | --- | --- | --- |
-| Done | Git defaults, aliases, global ignore rules | Reviewed defaults, aliases, and the delta pager (with a `less` fallback) are in `stow/home/.gitconfig`; global ignores are in `stow/home/.config/git/ignore`. Identity, credential helpers, `safe.directory`, LFS, and service-specific settings stay in an untracked `~/.gitconfig.local`. |
+| Done | Git defaults, aliases, global ignore rules | Reviewed defaults, aliases, and the delta pager (with a `less` fallback) are in `stow/home/.config/git/config`; global ignores are in `stow/home/.config/git/ignore`. Identity, credential helpers, `safe.directory`, LFS, and service-specific settings stay in an untracked `~/.gitconfig`, where `git config --global` writes. |
 | High | Active Zsh behavior and tool initialization | The source Mac's used shell behavior now lives in an untracked `~/.zshrc.local`. Promote a piece (for example fzf, the `codex-as` helpers, or the venv hook) only after reviewing that it is portable and still used. Keep tokens, machine paths, and private environment variables local. |
 | Medium | Zed keymap, theme, and selected settings | Track reviewed, portable preferences in an optional Stow package. Exclude API keys, account state, workspace history, and backup copies. Ghostty's portable appearance is already in the essential Stow package. |
 | Medium | Small tool preferences, such as direnv and micro | Promote only settings that are still used and safe on a fresh Mac. Avoid history and cache files. |
