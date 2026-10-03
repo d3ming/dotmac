@@ -2,6 +2,12 @@
 
 Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
 
+## 2026-10-02 — Split Git and Zsh config into portable Stow files and untracked local files
+
+Dotmac's Stow files hold portable defaults only. `~/.gitconfig` (tracked) holds reviewed aliases, including the destructive `rh`, `rop`, `db`, and `sweep`, and a delta pager that falls back to `less` when the development profile is absent. It includes `~/.gitconfig.local` last. That real, untracked file holds identity, credential helpers (gh for GitHub HTTPS, osxkeychain), `safe.directory`, Git LFS, and service-specific settings. Global ignores use Git's default `~/.config/git/ignore`, so no `core.excludesFile` is needed. Because `git config --global` and installers such as `gh auth setup-git` or `git lfs install` write through the `~/.gitconfig` symlink into this public repo, write machine settings with `git config --file ~/.gitconfig.local` and review `git status` after such tools run. Machine-specific shell setup lives in an untracked `~/.zshrc.local`, sourced last; promote a piece only after reviewing it.
+
+Evidence: on the source Mac, zsh history showed the old `$ZSH/bin` helpers (`git done`, `git promote`, `git wtf`, `git rank-contributors`) unused, so they were dropped rather than ported. The effective Git config before and after differed only in intended ways. HTTPS push auth through gh, pager output, vim, and an interactive login zsh with no startup errors were verified after `home apply`.
+
 ## 2026-09-29 — Evaluate local models before choosing workflow roles
 
 Use the opt-in [Promptfoo harness](../evals/local-llm/README.md), not another custom benchmark runner, for small shared Ollama tests. Keep calls loopback-only and serial, with fixed context/decoding settings, per-request unloading, deterministic grading, and ignored local results. Do not add model graders, cloud calls, tool execution, or an essential package/profile requirement. Keep agent defaults unchanged until a real workflow earns adoption.
@@ -52,7 +58,7 @@ Ghostty is the default terminal, so its portable appearance settings are part of
 
 The essential level adds ripgrep and uv to Git, GitHub CLI, and GNU Stow because code search and Python project setup are broad, portable needs here. The user confirmed Ghostty is now the default terminal, so its cask is essential too. Independent optional Brewfiles cover daily development CLI tools, GUI apps, and data/research tools. Heavy services, provider accounts, version managers, and narrowly owned tools stay out until a Mac needs them. The inventory and rationale live in `docs/setup-levels.md`; installed state and long-range shell history are evidence, not a full usage measure.
 
-The home package now includes a sanitized Git config with the portable defaults observed on this Mac. Name, email, and signing preferences stay in `~/.gitconfig.local`; credentials stay in a secure manager. The old Git aliases and global ignore file need review before promotion. A current Stow preview contradicts the earlier claim that Dotmac's home files remain linked on this Mac, so no live home files were replaced during this change.
+The home package now includes a sanitized Git config with the portable defaults observed on this Mac. Name, email, and signing preferences stay in `~/.gitconfig.local`; credentials stay in a secure manager. The old Git aliases and global ignore file were reviewed and promoted on 2026-10-02 (see that decision).
 
 ## 2026-09-23 — Dotmac owns personal Mac setup
 
