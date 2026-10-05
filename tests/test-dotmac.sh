@@ -271,6 +271,33 @@ if [[ $disk_diff == *'/h/b dir'* ]]; then
 	printf 'unchanged paths must not appear in disk diff\n' >&2
 	exit 1
 fi
+# disk snapshot: --ignore-dirs skips a path and records it; the comment lines
+# disk diff already ignores (see /^#/ { next }) make this safe to verify there.
+sleep 1
+export DOTMAC_DISK_IGNORE_DIRS="$tmp/skip-me"
+mkdir -p "$tmp/skip-me"
+snap_ignored=$("$repo_dir/scripts/dotmac" --json disk snapshot /h)
+[[ $snap_ignored == *'"ok":true'* ]]
+newest=$(ls -1 "$DOTMAC_DISK_DIR"/*.tsv | tail -1)
+grep -Fq "# ignored: -i $tmp/skip-me" "$newest"
+unset DOTMAC_DISK_IGNORE_DIRS
+
+# disk snapshot: a dua that hangs past the timeout is killed, not left to
+# block forever or abort the script (set -e + pipefail would otherwise trip
+# on dua's own non-zero exit from unreadable files, let alone a timeout).
+sleep 1
+cat > "$fakebin/dua" <<'EOF'
+#!/bin/bash
+sleep 30
+EOF
+chmod +x "$fakebin/dua"
+export DOTMAC_DISK_SNAPSHOT_TIMEOUT=1
+snap_timeout=$("$repo_dir/scripts/dotmac" --json disk snapshot /h)
+unset DOTMAC_DISK_SNAPSHOT_TIMEOUT
+[[ $snap_timeout == *'"ok":true'* ]]
+newest=$(ls -1 "$DOTMAC_DISK_DIR"/*.tsv | tail -1)
+grep -Fq '# TIMEOUT after 1s' "$newest"
+
 disk_diff_json=$("$repo_dir/scripts/dotmac" --json disk diff)
 
 if command -v ruby >/dev/null 2>&1; then

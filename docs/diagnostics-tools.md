@@ -93,7 +93,7 @@ snapshot or an open file as part of the first diagnostic pass.
 A one-off scan cannot say what grew. Keep dated snapshots and diff them:
 
 ```sh
-scripts/dotmac disk snapshot          # $HOME and the user temp dir, depth 2, via dua
+scripts/dotmac disk snapshot          # $HOME and the user temp dir, depth 3, via dua
 scripts/dotmac disk diff              # two newest snapshots: free-space change + top 25 movers
 scripts/dotmac disk diff OLD.tsv NEW.tsv
 ```
@@ -111,6 +111,22 @@ Two lessons from the 2026-10-03 incident:
   in `df` when one is removed, or use a tool that shows physical size.
 - **Check the user temp dir** (`getconf DARWIN_USER_TEMP_DIR`). It is not under
   `$HOME`, and it held 16.6 GB of leaked temporary git stores.
+
+One lesson from 2026-10-04: a snapshot that ran fine the day before hung for
+5.5+ hours at 0% CPU. The cause was **iCloud's "Desktop & Documents" sync**:
+`stat()` on an evicted placeholder under `~/Documents` does a network round
+trip, so any full-tree scanner blocks there, however large or small the real
+directory is. `~/projects` and `~/.local` (where a leaking project's data
+lived) are plain-but-large and finished in well under a minute on their own —
+file count was not the problem.
+
+The fix uses `dua`'s own flags rather than a custom scanner:
+`disk_snapshot()` passes `--ignore-dirs` for `~/Documents` and
+`~/Library/Mobile Documents` (override with `DOTMAC_DISK_IGNORE_DIRS`, a
+space-separated list), and wraps the whole call in the standard `timeout`
+command (default 600s, override with `DOTMAC_DISK_SNAPSHOT_TIMEOUT`) as a
+safety net for any future slow path not on that list. A snapshot that timed
+out is still saved, marked `# TIMEOUT after <n>s; snapshot is partial`.
 
 ## Visual tools and alternatives
 

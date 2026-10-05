@@ -459,31 +459,57 @@ disk_dir() {
 
 disk_snapshot() {
 	command -v dua >/dev/null 2>&1 || fail 'dua not found; run scripts/dotmac apply --profile diagnostics' 3
-	local dir stamp out paths=("$@") tmpdir
+	local dir stamp out paths=("$@") tmpdir ignore=() p timeout_s dua_args=()
 	dir=$(disk_dir)
 	if ((${#paths[@]} == 0)); then
 		tmpdir=$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || printf '%s' "${TMPDIR:-}")
 		paths=("$HOME")
 		[[ -n $tmpdir && -d $tmpdir ]] && paths+=("${tmpdir%/}")
 	fi
+	# ~/Documents (confirmed 2026-10-04) and iCloud Drive are virtualized by
+	# macOS's "Desktop & Documents" sync: stat() on an evicted placeholder does
+	# a network round-trip, so dua can block for hours at 0% CPU. dua's own
+	# --ignore-dirs prunes them before it ever descends in, which is cheap and
+	# avoids writing a custom scanner. ~/projects and ~/.local (where capfolio's
+	# growth lives) are plain-but-large and finish in under a minute on their
+	# own; DOTMAC_DISK_IGNORE_DIRS overrides this list (space-separated).
+	for p in ${DOTMAC_DISK_IGNORE_DIRS-"$HOME/Documents" "$HOME/Library/Mobile Documents"}; do
+		[[ -d $p ]] && ignore+=(-i "$p")
+	done
+	timeout_s=${DOTMAC_DISK_SNAPSHOT_TIMEOUT:-600}
 	mkdir -p "$dir"
 	stamp=$(date +%Y%m%dT%H%M%S)
 	out="$dir/$stamp.tsv"
 	{
 		printf '# dotmac disk snapshot %s\n' "$stamp"
 		printf '# free_kb\t%s\n' "$(df -k "$HOME" | awk 'NR==2{print $4}')"
+		((${#ignore[@]})) && printf '# ignored: %s\n' "${ignore[*]}"
 		# dua --depth prints an indented tree ("BYTES b <2 spaces per level>NAME"),
 		# sometimes with "<N IO Errors>"; rebuild full paths from the indent. dua
 		# exits non-zero on unreadable files, which is normal for $HOME. With a
 		# single input dua lists its children at the top level, so prefix them.
-		{ dua --format bytes aggregate --no-total --depth 3 "${paths[@]}" 2>/dev/null || true; } \
+		# timeout is a last-resort safety net for a slow path not in the ignore
+		# list above; exit 124 means it fired, and the snapshot is left partial.
+		# dua routinely exits non-zero on unreadable files under $HOME, so the
+		# pipeline is an `if` condition: that exempts it from set -e (pipefail
+		# would otherwise abort the script) while still giving us PIPESTATUS.
+		# dua_args stays non-empty so expanding it is safe on bash 3.2, where
+		# "${empty_array[@]}" under set -u is itself an unbound-variable error.
+		if ((${#ignore[@]})); then
+			dua_args=(--format bytes aggregate --no-total --depth 3 "${ignore[@]}" "${paths[@]}")
+		else
+			dua_args=(--format bytes aggregate --no-total --depth 3 "${paths[@]}")
+		fi
+		if timeout "$timeout_s" dua "${dua_args[@]}" 2>/dev/null \
 			| awk -v root="$( ((${#paths[@]} == 1)) && printf '%s' "${paths[0]%/}" )" '{ sub(/ +<[0-9]+ IO Errors?>$/, "") }
 				match($0, /^ *[0-9]+ b /) {
 					b = $1; rest = substr($0, RLENGTH + 1)
 					ind = match(rest, /[^ ]/) - 1; lvl = int(ind / 2); name = substr(rest, ind + 1)
 					p[lvl] = lvl > 0 ? p[lvl - 1] "/" name : root == "" ? name : root "/" name
 					printf "%s\t%s\n", b, p[lvl]
-				}'
+				}'; then :; fi
+		rc=${PIPESTATUS[0]}
+		((rc == 124)) && printf '# TIMEOUT after %ss; snapshot is partial\n' "$timeout_s"
 	} > "$out.partial"
 	mv "$out.partial" "$out"
 	result true disk-snapshot "$out" saved 0 "snapshot: $out ($(($(wc -l < "$out") - 2)) entries)"
