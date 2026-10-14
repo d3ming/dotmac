@@ -19,6 +19,10 @@ Keep Dotmac's portable setup small and safe. Current focus: establish an optiona
 - The old Holman `~/.dotfiles` checkout is no longer sourced by this Mac's shell or Git config; it remains on disk as a reference. Promoting pieces of `~/.zshrc.local` (fzf, `codex-as`, venv hook) is deferred. Zed and macOS preferences remain prioritized backup candidates, not automatically copied.
 - Four current Finder/Dock choices now have an opt-in `scripts/macos-preferences` check/apply/restore path. It is not part of essential setup and has not been applied to this Mac.
 
+## Completed on this Mac — 2026-10-14
+
+- Browser cleanup (DOTMAC-BROWSER-001): diagnosed pinned-tab loss (window-scoped pins plus startup setting; Helium set to continue, pins exported to `.agent-local/backups/`) and the Chrome hijack by Hermes real-profile mode. Added `scripts/agent-chrome` and loaded `ai.dotmac.agent-chrome` with user approval: real Chrome on its own profile, CDP `127.0.0.1:9229` (loopback only). Verified Hermes `browser_exec` through `browser.cdp_url` alone, `navigator.webdriver=false`, and restart after quit. Pointed three Hermes configs at it (backups in `.agent-local/backups/2026-10-14-agent-chrome/`) and stopped six leaked browser_harness daemons.
+
 ## Completed on this Mac — 2026-10-03
 
 - Disk-space incident: free space fell from about 163 GiB (2026-09-25) to 13 GiB. Removed 50 leaked temporary git stores (16.6 GiB) from the user temp dir; each was a full copy of `~/.hermes`, and the creator is not yet identified. Removing one Claude subagent worktree freed only 115 MB, so worktrees share dependencies through APFS clones as intended. About 70 GiB of growth is accounted for (Ollama models, the Claude desktop VM, agent homes, caches); the rest needs a snapshot diff to find.
@@ -57,6 +61,8 @@ Keep Dotmac's portable setup small and safe. Current focus: establish an optiona
 - Pushed the two setup commits through `f838bb5`; the GitHub Secret scan completed successfully and native secret scanning reported zero alerts. Compared this Mac's settings with the old dotfiles script and public GitHub setup repos, then added a four-key optional macOS profile. The read-only check matched this Mac; isolated apply, rerun, and restore checks passed with a fake `defaults` command. Added a portable Ghostty appearance config: its Vesper theme is present in the installed app, and Stow previews cleanly on an empty target. Ghostty's CLI config check exited 1 without output in this sandbox, so a live Ghostty load remains unverified. No live settings were changed.
 
 ## Next action
+
+Browser cleanup: Dong signs in to sites in agent Chrome; then Hera runs the test matrix (Phase 3) and old Chrome lanes and data are removed (Phase 4). See `.agent-local/INDEX.md`.
 
 Pick one real, bounded workflow (for example sanitized handoff extraction or note routing), add representative cases and a validation/fallback path, and evaluate before adoption. Keep the existing agent defaults unchanged. A disposable patch-and-test task and MLX grammar-constrained output/API comparisons remain separate follow-ups; the basic suite does not validate them.
 

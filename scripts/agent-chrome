@@ -1,0 +1,133 @@
+#!/bin/zsh
+# Shared agent Chrome: real Google Chrome on its own profile, reachable by
+# local agents over CDP at 127.0.0.1:9229. Helium stays the personal browser.
+# Run without arguments to preview. `install` writes and loads a LaunchAgent
+# that keeps this Chrome running; `uninstall` stops and removes it.
+set -euo pipefail
+
+usage() {
+	print -u2 'usage: scripts/agent-chrome [check|install|uninstall|run]'
+	exit 2
+}
+
+fail() {
+	print -u2 -- "agent-chrome: $1"
+	exit 1
+}
+
+[[ $(uname -s) == Darwin ]] || fail 'macOS only'
+(( EUID != 0 )) || fail 'run as the signed-in user, not root'
+
+mode=${1:-check}
+(( $# <= 1 )) || usage
+
+repo_dir=${0:A:h:h}
+label=ai.dotmac.agent-chrome
+port=9229
+chrome='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+profile="$HOME/Library/Application Support/Google/Chrome Agent"
+source_nmh="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+plist="$HOME/Library/LaunchAgents/$label.plist"
+log="$HOME/Library/Logs/agent-chrome.log"
+domain="gui/$(id -u)"
+
+cdp_up() {
+	/usr/bin/curl -fsS --max-time 2 "http://127.0.0.1:$port/json/version" >/dev/null 2>&1
+}
+
+loaded() {
+	launchctl print "$domain/$label" >/dev/null 2>&1
+}
+
+render_plist() {
+	cat <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>$label</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/zsh</string>
+		<string>$repo_dir/scripts/agent-chrome</string>
+		<string>run</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ProcessType</key>
+	<string>Interactive</string>
+	<key>StandardErrorPath</key>
+	<string>$log</string>
+	<key>StandardOutPath</key>
+	<string>$log</string>
+</dict>
+</plist>
+EOF
+}
+
+case $mode in
+	check)
+		print "Chrome:   $([[ -x $chrome ]] && print present || print MISSING)"
+		print "Profile:  $profile ($([[ -d $profile ]] && print exists || print 'will be created'))"
+		print "CDP:      http://127.0.0.1:$port ($(cdp_up && print up || print down))"
+		print "Job:      $label ($(loaded && print loaded || print 'not loaded'))"
+		if [[ -f $plist ]] && ! render_plist | cmp -s - "$plist"; then
+			print 'Plist:    differs from what install would write:'
+			render_plist | diff "$plist" - || true
+		elif [[ ! -f $plist ]]; then
+			print "Plist:    install would write $plist"
+		else
+			print 'Plist:    current'
+		fi
+		;;
+	install)
+		[[ -x $chrome ]] || fail "Chrome not found at $chrome"
+		mkdir -p "$profile/NativeMessagingHosts"
+		chmod 700 "$profile"
+		# Browser extension helpers (1Password, Claude, ...) look here for a
+		# non-default profile. Copy only missing manifests; never overwrite.
+		if [[ -d $source_nmh ]]; then
+			for f in "$source_nmh"/*.json(N); do
+				[[ -e $profile/NativeMessagingHosts/${f:t} ]] || cp -p "$f" "$profile/NativeMessagingHosts/"
+			done
+		fi
+		render_plist >"$plist.tmp"
+		plutil -lint "$plist.tmp" >/dev/null
+		mv "$plist.tmp" "$plist"
+		loaded && launchctl bootout "$domain/$label" || true
+		launchctl bootstrap "$domain" "$plist"
+		print "agent-chrome: loaded $label; CDP will be at http://127.0.0.1:$port"
+		;;
+	uninstall)
+		loaded && launchctl bootout "$domain/$label" || true
+		rm -f "$plist"
+		print "agent-chrome: removed $label (profile kept at $profile)"
+		;;
+	run)
+		# Supervisor run by launchd. If this profile's Chrome is already up
+		# (for example after Chrome relaunched itself to update), wait instead
+		# of starting a second copy.
+		while true; do
+			if cdp_up; then
+				sleep 15
+				continue
+			fi
+			print "$(date '+%F %T') starting Chrome"
+			"$chrome" \
+				--user-data-dir="$profile" \
+				--remote-debugging-port=$port \
+				--no-first-run \
+				--no-default-browser-check \
+				--disable-background-timer-throttling \
+				--disable-renderer-backgrounding \
+				--disable-backgrounding-occluded-windows \
+				>/dev/null 2>&1 || true
+			print "$(date '+%F %T') Chrome exited"
+			sleep 5
+		done
+		;;
+	*) usage ;;
+esac

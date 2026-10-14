@@ -2,6 +2,14 @@
 
 Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
 
+## 2026-10-14 — Real Chrome is the shared agent browser; Helium is personal
+
+Helium is the personal browser. Google Chrome is reserved for agents: `scripts/agent-chrome install` loads the LaunchAgent `ai.dotmac.agent-chrome`, which keeps real Chrome running on its own profile (`~/Library/Application Support/Google/Chrome Agent`) with CDP on `127.0.0.1:9229`. Any local agent (Hermes, Claude, Codex) can attach, one at a time. The user signs in to sites there by hand; signed-in financial accounts are read-only for agents.
+
+Chrome 136+ ignores remote-debugging switches on the default profile, and the `chrome://inspect` alternative prompts on every connection, so the agent profile must be a non-default directory. Keeping it always running means clicking Chrome reaches that same instance. Real Chrome in a normal window reports `navigator.webdriver=false`; Chrome for Testing and WebDriver are rejected for bot-detection reasons. The run loop waits while CDP is already up, so a self-relaunch after an update does not start a second copy. Quitting Chrome restarts it within about 20 seconds; `scripts/agent-chrome uninstall` stops it.
+
+This replaces Hermes's `use_real_profile` snapshot mode, which launched the user's Chrome.app on a copied profile and leaked it (upstream hermes-agent #106601, #108387). Evidence and plan: `.agent-local/handoffs/DOTMAC/DOTMAC-BROWSER-001--pinned-tabs-restore/`. Pinned-tab loss was separate: Chromium pins belong to a window, and only "Continue where you left off" restores them.
+
 ## 2026-10-03 — Manage Git's XDG config; keep ~/.gitconfig local
 
 Dotmac now links `~/.config/git/config` instead of `~/.gitconfig`, and `home apply` creates an empty, private `~/.gitconfig` when absent. Git reads the XDG file first and `~/.gitconfig` second, so local identity and credentials still override portable defaults without an include. `git config --global`, `gh auth setup-git`, and `git lfs install` write to `~/.gitconfig` whenever it exists; with the old layout they wrote through the symlink into this public repo. This supersedes the `~/.gitconfig.local` file and the write-with-`--file` workaround in the 2026-10-02 entry below.
