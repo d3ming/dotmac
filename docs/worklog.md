@@ -17,7 +17,11 @@ Keep Dotmac's portable setup small and safe. Current focus: establish an optiona
 - The README gives one clone command, one local Codex setup path, and a reusable prompt that uses the Dotmac CLI for the essential level. `docs/setup-levels.md` explains profiles and safe backup scope. The project-owned macOS administration skill now lives at `.agents/skills/macos-sysadmin/SKILL.md`; `AGENTS.md` points there instead of a personal skill path, and `tests/test-dotmac.sh` protects discovery (passed, as did Bash syntax, Brewfile Ruby syntax, and `git diff --check`).
 - `AGENTS.md` now tells agents to commit and push completed, publishable changes by default, then check CI and security scans.
 - The old Holman `~/.dotfiles` checkout is no longer sourced by this Mac's shell or Git config; it remains on disk as a reference. Promoting pieces of `~/.zshrc.local` (fzf, `codex-as`, venv hook) is deferred. Zed and macOS preferences remain prioritized backup candidates, not automatically copied.
-- Four current Finder/Dock choices now have an opt-in `scripts/macos-preferences` check/apply/restore path. It is not part of essential setup and has not been applied to this Mac.
+- Six standard Finder, Dock, and trackpad choices have a `scripts/macos-preferences` check/apply/restore path, and the new-Mac quick start applies it (decision 2026-10-20). On this Mac the two trackpad values already match; Finder/Dock have not been checked or applied here.
+
+## Completed on this Mac — 2026-10-20
+
+- Trackpad preferences (DOTMAC-PREFS-001): turned off swipe-between-pages (key was unset, now `0`) and confirmed natural scrolling was already off. Added both to `scripts/macos-preferences` with test coverage, changed the quick-start prompt to apply preferences, and updated docs. This checkout was 21 commits behind `origin/main`; an earlier standalone `macos/defaults.sh` was dropped in favor of the existing script. Browsers need a relaunch to pick up the swipe change; the gesture itself has not been tried by hand.
 
 ## Completed on this Mac — 2026-10-14
 

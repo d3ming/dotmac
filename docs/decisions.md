@@ -62,6 +62,12 @@ Rectangle belongs in the essential profile because the user wants it on every ma
 
 The user wants the 1Password app in the essential profile while considering a future move from Bitwarden. Install [`1password`](https://formulae.brew.sh/cask/1password) as a Homebrew cask on every managed Mac. Keep [`1password-cli`](https://formulae.brew.sh/cask/1password-cli) in the optional development profile because the `op` command is only needed for CLI workflows. On the source Mac both casks are already Homebrew-managed. Installing the app does not authorize sign-in, vault import/migration, or Bitwarden removal; those remain separate user-directed account actions. Never store vault contents or credentials in Dotmac.
 
+## 2026-10-20 — Make trackpad preferences standard and apply preferences on new Macs
+
+The user wants two trackpad choices on every Mac: no two-finger swipe between pages (`AppleEnableSwipeNavigateWithScrolls` = false, which stops accidental browser back/forward) and natural scrolling off (`com.apple.swipescrolldirection` = false, the user's scroll direction on every Mac). Both were added to `scripts/macos-preferences` rather than a second script, so they share its read-only check, differing-keys-only apply, read-back verification, and backup/restore. On this Mac the swipe key was unset (macOS default on) and natural scrolling was already off. The three-finger swipe was left alone: it is set to full-screen-app switching, not page navigation.
+
+This supersedes the 2026-09-23 decisions that kept preferences opt-in and listed trackpad as excluded. The new-Mac quick start now runs `scripts/dotmac preferences check` and `apply`, so the Finder and Dock values apply on new Macs too. Other trackpad settings, keyboard, display, and security settings stay manual.
+
 ## 2026-09-23 — Automate only four observed user-level macOS preferences
 
 Finder path/status bars, Finder list view, and Dock position are set on this Mac and have narrow `defaults` keys. `scripts/macos-preferences` provides a read-only check, an opt-in apply that changes only differing keys, read-back verification, and a local selective backup/restore. It does not run during essential setup or restart Finder/Dock. Older dotfiles and public setup repos were used as references, but their broad scripts include stale or unrelated settings; the reviewed sources and exclusions are in `docs/macos-preferences.md`.

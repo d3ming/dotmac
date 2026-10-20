@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Optional, user-level Finder and Dock preferences observed on the source Mac.
+# User-level Finder, Dock, and trackpad preferences observed on the source Mac.
 # Run without arguments to preview. Applying saves only the keys it changes.
 set -euo pipefail
 
@@ -29,12 +29,12 @@ backup_dir="$repo_dir/.agent-local/macos-preferences"
 defaults_cmd=${DOTMAC_DEFAULTS_CMD:-/usr/bin/defaults}
 
 typeset -a labels domains keys kinds desired expected
-labels=('Finder path bar' 'Finder status bar' 'Finder list view' 'Dock on left')
-domains=(com.apple.finder com.apple.finder com.apple.finder com.apple.dock)
-keys=(ShowPathbar ShowStatusBar FXPreferredViewStyle orientation)
-kinds=(-bool -bool -string -string)
-desired=(true true Nlsv left)
-expected=(1 1 Nlsv left)
+labels=('Finder path bar' 'Finder status bar' 'Finder list view' 'Dock on left' 'Trackpad swipe between pages off' 'Trackpad natural scrolling off')
+domains=(com.apple.finder com.apple.finder com.apple.finder com.apple.dock NSGlobalDomain NSGlobalDomain)
+keys=(ShowPathbar ShowStatusBar FXPreferredViewStyle orientation AppleEnableSwipeNavigateWithScrolls com.apple.swipescrolldirection)
+kinds=(-bool -bool -string -string -bool -bool)
+desired=(true true Nlsv left false false)
+expected=(1 1 Nlsv left 0 0)
 
 if [[ $mode == restore ]]; then
 	backup_file=$2
@@ -42,7 +42,7 @@ if [[ $mode == restore ]]; then
 	typeset -a restore_domains restore_keys restore_kinds restore_states restore_values
 	while IFS=$'\t' read -r domain key kind state value; do
 		case "$domain:$key:$kind" in
-			com.apple.finder:ShowPathbar:-bool|com.apple.finder:ShowStatusBar:-bool|com.apple.finder:FXPreferredViewStyle:-string|com.apple.dock:orientation:-string) ;;
+			com.apple.finder:ShowPathbar:-bool|com.apple.finder:ShowStatusBar:-bool|com.apple.finder:FXPreferredViewStyle:-string|com.apple.dock:orientation:-string|NSGlobalDomain:AppleEnableSwipeNavigateWithScrolls:-bool|NSGlobalDomain:com.apple.swipescrolldirection:-bool) ;;
 			*) fail 'backup contains an unrecognized preference' ;;
 		esac
 		[[ $state == set || $state == unset ]] || fail 'backup contains an invalid state'
@@ -72,7 +72,7 @@ if [[ $mode == restore ]]; then
 		fi
 		print -r -- "restored: ${restore_domains[$i]}.${restore_keys[$i]}"
 	done
-	print 'Restart Finder or Dock when convenient to see restored settings.'
+	print 'Restart Finder, Dock, or browsers (trackpad settings may need a sign-out) when convenient to see restored settings.'
 	exit 0
 fi
 
@@ -122,4 +122,4 @@ for i in $changed; do
 	[[ $actual == ${expected[$i]} ]] || fail "could not verify ${domains[$i]}.${keys[$i]}"
 	print -r -- "applied: ${labels[$i]}"
 done
-print 'Restart Finder or Dock when convenient to see changed settings.'
+print 'Restart Finder, Dock, or browsers (trackpad settings may need a sign-out) when convenient to see changed settings.'

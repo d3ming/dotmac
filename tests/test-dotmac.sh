@@ -110,6 +110,8 @@ case "$*" in
 	'read com.apple.finder ShowStatusBar') printf '1\n' ;;
 	'read com.apple.finder FXPreferredViewStyle') printf 'Nlsv\n' ;;
 	'read com.apple.dock orientation') printf 'left\n' ;;
+	'read NSGlobalDomain AppleEnableSwipeNavigateWithScrolls') printf '0\n' ;;
+	'read NSGlobalDomain com.apple.swipescrolldirection') printf '0\n' ;;
 	*) exit 1 ;;
 esac
 EOF

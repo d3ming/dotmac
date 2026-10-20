@@ -1,6 +1,6 @@
 # Portable macOS preferences
 
-This is an **opt-in** user-level profile for a few Finder and Dock choices observed on the source Mac on 2026-09-23 (macOS 27). It uses Apple's `defaults` utility. It does not run during the essential setup, require `sudo`, change security settings, or restart apps. Apple documents the [Finder path and status bars](https://support.apple.com/guide/mac-help/mchlp1774/mac) and the [Dock position](https://support.apple.com/guide/mac-help/change-desktop-dock-settings-mchlp1119/mac) in System Settings.
+This is the user-level profile of standard Finder, Dock, and trackpad choices observed on the source Mac (Finder/Dock on 2026-09-23, macOS 27; trackpad added 2026-10-20 at the user's request). It uses Apple's `defaults` utility. The new-Mac quick start applies it after the essential setup; it does not require `sudo`, change security settings, or restart apps. Apple documents the [Finder path and status bars](https://support.apple.com/guide/mac-help/mchlp1774/mac) and the [Dock position](https://support.apple.com/guide/mac-help/change-desktop-dock-settings-mchlp1119/mac) in System Settings.
 
 | Preference | Current value | Restore intent |
 | --- | --- | --- |
@@ -8,6 +8,8 @@ This is an **opt-in** user-level profile for a few Finder and Dock choices obser
 | Finder status bar | Shown | Keep item count and free space visible. |
 | Finder default view | List (`Nlsv`) | Make file details easy to scan. |
 | Dock position | Left | Match the source Mac's current workspace layout. |
+| Trackpad swipe between pages | Off (`AppleEnableSwipeNavigateWithScrolls` = false) | Stop two-finger horizontal swipes from going back or forward in browsers by accident. The three-finger swipe is unchanged. |
+| Trackpad natural scrolling | Off (`com.apple.swipescrolldirection` = false) | Keep the user's scroll direction; macOS defaults to on. |
 
 From the Dotmac checkout:
 
@@ -22,13 +24,13 @@ scripts/macos-preferences apply
 scripts/macos-preferences restore /path/printed/by/apply.tsv
 ```
 
-Finder and Dock may need to be restarted or the user may need to sign out before the interface reflects a change. The script does not force either action. If the Mac has managed preferences, a read-back failure stops the script; use the Mac's management policy instead of forcing the value.
+Finder and Dock may need to be restarted, browsers relaunched, or the user may need to sign out before the interface reflects a change (the trackpad keys in particular). The script does not force either action. If the Mac has managed preferences, a read-back failure stops the script; use the Mac's management policy instead of forcing the value.
 
 ## What was considered
 
 The older `~/.dotfiles/macos/set-defaults.sh` was reviewed as historical data. Its keyboard-repeat and hot-corner values no longer match this Mac, and its Safari/debug and network settings are outside this profile. We also compared [Mathias Bynens's macOS defaults](https://github.com/mathiasbynens/dotfiles/blob/main/.macos), [a flag-gated Ansible workstation setup](https://github.com/mtharpe/ansible-macos-workstation), and [a dotfiles setup with dry-run and backup behavior](https://github.com/avelinoschz/dotfiles). The Finder key names and the preview/backup pattern were useful references; no external installer or broad settings script was copied.
 
-Keyboard repeat, press-and-hold, Dock size, hot corners, trackpad, display, screenshots, login items, browser defaults, network, security/privacy permissions, and accessibility settings are excluded for now. Some vary by device or language, some have no explicit current value to preserve, and some need user or system approval. Prefer the visible System Settings control for those until there is a specific, verified cross-Mac reason to automate one.
+Keyboard repeat, press-and-hold, Dock size, hot corners, other trackpad gestures and tracking speed, display, screenshots, login items, browser defaults, network, security/privacy permissions, and accessibility settings are excluded for now. Some vary by device or language, some have no explicit current value to preserve, and some need user or system approval. Prefer the visible System Settings control for those until there is a specific, verified cross-Mac reason to automate one.
 
 ## Other app settings
 

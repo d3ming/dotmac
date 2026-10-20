@@ -25,7 +25,7 @@ The old `~/dotfiles` checkout and the Notion page linked in the README are refer
 4. Recheck the managed files, shell startup, Vim, Git config, and Ghostty config. Keep Git identity and signing preferences in the local, untracked `~/.gitconfig` (Dotmac manages `~/.config/git/config`); keep credentials in a secure credential manager. Record the change, evidence, and any recovery path.
 5. Continue other setup items one at a time with user direction. A reference checklist is not blanket authorization to install software or alter settings.
 
-The optional macOS preferences profile is documented in `docs/macos-preferences.md`. Run its read-only `check` first. Apply it only when that Mac should inherit those Finder and Dock choices; keep its local backup and do not force-restart apps.
+The standard macOS preferences (Finder, Dock, trackpad) are documented in `docs/macos-preferences.md`. On a new Mac, run `scripts/dotmac preferences check`, then `scripts/dotmac preferences apply`; keep its local backup and do not force-restart apps. Add a preference only when the user asks for it as standard.
 
 ## Project memory
 
