@@ -44,6 +44,10 @@ On a Mac where agents drive a browser, `scripts/agent-chrome` previews, installs
 
 GitHub Actions scans pushes and pull requests with Gitleaks. GitHub secret scanning and push protection are enabled; see [secret scanning](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning) and [push protection](https://docs.github.com/en/code-security/concepts/secret-security/push-protection).
 
+## PHP security checks
+
+Run `python3 scripts/php-security-check --json` for bounded, read-only PHP discovery. It never executes PHP or changes system settings. See [PHP security](docs/php-security.md) for scope, the dated advisory baseline, and patch/restart guidance. Container contents require a separate read-only inventory.
+
 ## Local LLM experiments
 
 The opt-in [Promptfoo harness](evals/local-llm/README.md) compares local Ollama models on small workflow tasks and a native tool-call probe. It uses deterministic grading, serial calls, and ignored local results; it does not change agent defaults or execute generated code/tools. Promptfoo and model downloads are not part of the essential setup.

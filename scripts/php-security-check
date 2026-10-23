@@ -1,0 +1,439 @@
+#!/usr/bin/env python3
+"""Read-only, bounded discovery of local PHP exposure candidates.
+
+This audit never launches a discovered PHP executable or app bundle. It reads
+only fixed Apache configuration files, Homebrew metadata, PATH entries, and
+bounded directory listings.
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence
+
+SCHEMA_VERSION = 1
+ADVISORY_BASELINE_DATE = "2026-10-21"
+ADVISORY_THRESHOLDS = {"8.5": "8.5.12", "8.4": "8.4.27", "8.3": "8.3.36", "8.2": "8.2.35"}
+PHP_NAMES = ("php", "php-fpm", "php-cgi")
+BREW_FORMULAE = {
+    "php", "php@8.5", "php@8.4", "php@8.3", "php@8.2", "php@8.1", "php@8.0", "php@7.4",
+    "httpd", "nginx", "caddy", "lighttpd",
+}
+MAX_PATH_ENTRIES = 128
+MAX_DIRECTORY_ENTRIES = 4096
+MAX_CELLAR_VERSIONS = 24
+MAX_CONFIG_BYTES = 65536
+MAX_PROCESS_LINES = 4096
+
+
+def _host_path(path: str, root: str) -> Path:
+    """Map an absolute host path into a synthetic root when testing."""
+    if root == "/":
+        return Path(path)
+    return Path(root) / path.lstrip("/")
+
+
+def _record_issue(issues: List[str], label: str, exc: BaseException) -> None:
+    # Keep exception text out of reports; it can contain unrelated machine data.
+    issues.append("{}: {}".format(label, type(exc).__name__))
+
+
+def _is_file(path: str, root: str, issues: List[str]) -> bool:
+    try:
+        return _host_path(path, root).is_file()
+    except OSError as exc:
+        _record_issue(issues, "file probe", exc)
+        return False
+
+
+def _entries(path: str, root: str, issues: List[str]) -> List[str]:
+    host = _host_path(path, root)
+    try:
+        found: List[str] = []
+        with os.scandir(str(host)) as iterator:
+            for entry in iterator:
+                found.append(entry.name)
+                if len(found) > MAX_DIRECTORY_ENTRIES:
+                    _record_issue(issues, "directory listing truncated", OverflowError())
+                    break
+        return sorted(found[:MAX_DIRECTORY_ENTRIES])
+    except FileNotFoundError:
+        return []
+    except NotADirectoryError:
+        return []
+    except OSError as exc:
+        # Missing standard roots are normal; other failures limit visibility.
+        _record_issue(issues, "directory probe", exc)
+        return []
+
+
+def _candidate(path: str, source: str, root: str, candidates: Dict[str, Dict[str, str]], issues: List[str]) -> None:
+    if _is_file(path, root, issues):
+        key = path
+        candidates.setdefault(key, {"path": path, "source": source})
+
+
+def _candidate_binaries(base: str, source: str, root: str, candidates: Dict[str, Dict[str, str]], issues: List[str]) -> None:
+    for name in PHP_NAMES:
+        _candidate(base.rstrip("/") + "/" + name, source, root, candidates, issues)
+
+
+def _path_candidates(env: Dict[str, str], root: str, candidates: Dict[str, Dict[str, str]], issues: List[str]) -> None:
+    entries = env.get("PATH", "").split(os.pathsep)[:MAX_PATH_ENTRIES]
+    for entry in entries:
+        if not entry or not os.path.isabs(entry):
+            continue
+        for name in PHP_NAMES:
+            _candidate(entry.rstrip("/") + "/" + name, "PATH", root, candidates, issues)
+
+
+def _brew_path(env: Dict[str, str], root: str) -> Optional[str]:
+    for entry in env.get("PATH", "").split(os.pathsep)[:MAX_PATH_ENTRIES]:
+        if not entry or not os.path.isabs(entry):
+            continue
+        candidate = entry.rstrip("/") + "/brew"
+        if _host_path(candidate, root).is_file():
+            return candidate
+    for candidate in ("/opt/homebrew/bin/brew", "/usr/local/bin/brew"):
+        if _host_path(candidate, root).is_file():
+            return candidate
+    return None
+
+
+def _scan_brew_roots(root: str, candidates: Dict[str, Dict[str, str]], issues: List[str]) -> None:
+    formula_name = re.compile(r"^php(?:@\d+(?:\.\d+)?)?$")
+    for prefix in ("/opt/homebrew", "/usr/local"):
+        opt = prefix + "/opt"
+        for entry in _entries(opt, root, issues):
+            if formula_name.match(entry):
+                _candidate_binaries(opt + "/" + entry + "/bin", "Homebrew opt", root, candidates, issues)
+
+        cellar = prefix + "/Cellar"
+        for formula in _entries(cellar, root, issues):
+            if not formula_name.match(formula):
+                continue
+            formula_path = cellar + "/" + formula
+            for version in _entries(formula_path, root, issues)[:MAX_CELLAR_VERSIONS]:
+                _candidate_binaries(formula_path + "/" + version + "/bin", "Homebrew Cellar", root, candidates, issues)
+
+
+def _scan_versioned_app_dir(base: str, source: str, root: str, candidates: Dict[str, Dict[str, str]], issues: List[str]) -> None:
+    for entry in _entries(base, root, issues):
+        if entry.lower().startswith("php"):
+            _candidate_binaries(base.rstrip("/") + "/" + entry + "/bin", source, root, candidates, issues)
+
+
+def _scan_apps(home: str, root: str, candidates: Dict[str, Dict[str, str]], issues: List[str]) -> None:
+    # Known app locations only; no recursive bundle walks.
+    for app_base, source in (
+        ("/Applications/MAMP/bin/php", "MAMP"),
+        (home.rstrip("/") + "/Applications/MAMP/bin/php", "MAMP"),
+    ):
+        _scan_versioned_app_dir(app_base, source, root, candidates, issues)
+
+    for base in (
+        "/Applications/MAMP/bin",
+        "/Applications/XAMPP/xamppfiles/bin",
+        home.rstrip("/") + "/Applications/XAMPP/xamppfiles/bin",
+    ):
+        _candidate_binaries(base, "MAMP/XAMPP", root, candidates, issues)
+
+    herd_roots = (
+        home.rstrip("/") + "/Library/Application Support/Herd/bin",
+        home.rstrip("/") + "/.config/herd/bin",
+    )
+    for base in herd_roots:
+        _candidate_binaries(base, "Herd", root, candidates, issues)
+        for entry in _entries(base, root, issues):
+            if entry.lower().startswith("php"):
+                executable = base.rstrip("/") + "/" + entry
+                _candidate(executable, "Herd", root, candidates, issues)
+                version_dir = executable
+                _candidate_binaries(version_dir, "Herd", root, candidates, issues)
+                _candidate_binaries(version_dir + "/bin", "Herd", root, candidates, issues)
+
+    local_roots = (
+        home.rstrip("/") + "/Library/Application Support/Local/lightning-services",
+        "/Applications/Local.app/Contents/Resources/extraResources/lightning-services",
+        home.rstrip("/") + "/Applications/Local.app/Contents/Resources/extraResources/lightning-services",
+    )
+    for base in local_roots:
+        for entry in _entries(base, root, issues):
+            if not entry.lower().startswith("php"):
+                continue
+            service = base.rstrip("/") + "/" + entry
+            for rel in ("bin/darwin/php", "bin/darwin/php-fpm", "bin/darwin-arm64/php", "bin/php", "php/bin/php"):
+                _candidate(service + "/" + rel, "Local", root, candidates, issues)
+
+
+def _read_brew_receipt(path: Path, issues: List[str]) -> Optional[str]:
+    try:
+        with path.open("rb") as stream:
+            raw = stream.read(MAX_CONFIG_BYTES + 1)
+    except OSError as exc:
+        _record_issue(issues, "Homebrew receipt", exc)
+        return None
+    if len(raw) > MAX_CONFIG_BYTES:
+        _record_issue(issues, "Homebrew receipt truncated", OverflowError())
+        return None
+    try:
+        receipt = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        _record_issue(issues, "Homebrew receipt", ValueError())
+        return None
+    source = receipt.get("source", {}) if isinstance(receipt, dict) else {}
+    versions = source.get("versions", {}) if isinstance(source, dict) else {}
+    version = versions.get("stable") if isinstance(versions, dict) else None
+    return version if isinstance(version, str) else None
+
+
+def _brew_metadata(env: Dict[str, str], root: str, issues: List[str]) -> Dict[str, Any]:
+    # Merely locate brew; package inventory comes from fixed Homebrew receipts.
+    # Do not execute Homebrew, its plugins, or any discovered package code.
+    brew = _brew_path(env, root)
+    if not brew:
+        return {"status": "not_available", "packages": []}
+
+    packages: List[Dict[str, Any]] = []
+    for prefix in ("/opt/homebrew", "/usr/local"):
+        cellar = prefix + "/Cellar"
+        for formula in _entries(cellar, root, issues):
+            if formula not in BREW_FORMULAE:
+                continue
+            versions: List[str] = []
+            for directory in _entries(cellar + "/" + formula, root, issues)[:MAX_CELLAR_VERSIONS]:
+                receipt = _host_path(cellar + "/" + formula + "/" + directory + "/INSTALL_RECEIPT.json", root)
+                try:
+                    receipt_exists = receipt.is_file()
+                except OSError as exc:
+                    _record_issue(issues, "Homebrew receipt", exc)
+                    receipt_exists = False
+                if not receipt_exists:
+                    continue
+                version = _read_brew_receipt(receipt, issues)
+                if version and version not in versions:
+                    versions.append(version)
+            if not versions:
+                continue
+            package: Dict[str, Any] = {"formula": formula, "package_metadata_versions": versions}
+            if formula == "php" or formula.startswith("php@"):
+                package["advisory_baseline"] = [
+                    {"version": version, "assessment": _assess_version(version)} for version in versions
+                ]
+            packages.append(package)
+    packages.sort(key=lambda item: (item["formula"], item["package_metadata_versions"]))
+    return {"status": "checked", "brew_path": brew, "packages": packages}
+
+
+def _assess_version(version: str) -> str:
+    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:_\d+)?", version)
+    if not match:
+        return "not_comparable_from_package_metadata"
+    major, minor, patch = (int(part) for part in match.groups())
+    threshold = ADVISORY_THRESHOLDS.get("{}.{}".format(major, minor))
+    if threshold is None:
+        return "outside_this_baseline"
+    required_patch = int(threshold.rsplit(".", 1)[1])
+    return "at_or_above_baseline" if patch >= required_patch else "below_baseline"
+
+
+def _command_path(name: str, env: Dict[str, str], root: str) -> Optional[str]:
+    for entry in env.get("PATH", "").split(os.pathsep)[:MAX_PATH_ENTRIES]:
+        if entry and os.path.isabs(entry):
+            path = entry.rstrip("/") + "/" + name
+            if _host_path(path, root).is_file():
+                return path
+    return None
+
+
+def _process_names(ps: Optional[str], root: str, runner: Any, issues: List[str]) -> Dict[str, Any]:
+    if not ps:
+        _record_issue(issues, "process listing", FileNotFoundError())
+        return {"status": "unavailable", "php_process_names": [], "docker_daemon_process_names": []}
+    try:
+        result = runner(
+            [_host_path(ps, root).as_posix(), "-axo", "comm="],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        _record_issue(issues, "process listing", exc)
+        return {"status": "unavailable", "php_process_names": [], "docker_daemon_process_names": []}
+
+    lines = (result.stdout or "").splitlines()[:MAX_PROCESS_LINES + 1]
+    truncated = len(lines) > MAX_PROCESS_LINES
+    names = {Path(line.strip()).name.lower() for line in lines[:MAX_PROCESS_LINES] if line.strip()}
+    php_names = sorted(name for name in names if name == "php" or name.startswith("php-") or name.startswith("php_"))
+    docker_names = sorted(name for name in names if name in {"docker", "dockerd", "com.docker.backend", "docker desktop"})
+    return {
+        "status": "checked" if result.returncode == 0 else "unavailable",
+        "php_process_names": php_names,
+        "docker_daemon_process_names": docker_names,
+        "truncated": truncated,
+    }
+
+
+def _apache_references(root: str, issues: List[str]) -> Dict[str, Any]:
+    configs = (
+        "/etc/apache2/httpd.conf",
+        "/opt/homebrew/etc/httpd/httpd.conf",
+        "/usr/local/etc/httpd/httpd.conf",
+        "/Applications/MAMP/conf/apache/httpd.conf",
+        "/Applications/XAMPP/etc/httpd.conf",
+        "/Applications/XAMPP/etc/extra/httpd-xampp.conf",
+        "/Applications/XAMPP/xamppfiles/etc/httpd.conf",
+    )
+    found: List[Dict[str, Any]] = []
+    checked: List[str] = []
+    for config in configs:
+        host = _host_path(config, root)
+        if not _is_file(config, root, issues):
+            continue
+        checked.append(config)
+        try:
+            with host.open("rb") as stream:
+                data = stream.read(MAX_CONFIG_BYTES + 1)
+        except OSError as exc:
+            _record_issue(issues, "Apache configuration", exc)
+            continue
+        truncated = len(data) > MAX_CONFIG_BYTES
+        if truncated:
+            issues.append("Apache configuration truncated")
+        text = data[:MAX_CONFIG_BYTES].decode("utf-8", errors="replace")
+        categories: Dict[str, List[int]] = {"mod_php": [], "fastcgi_php": [], "php_handler": [], "other_php_reference": []}
+        for line_number, line in enumerate(text.splitlines(), 1):
+            low = line.lower()
+            if re.match(r"\s*#", low):
+                continue
+            mentions_php = bool(re.search(r"php|libphp", low))
+            if not mentions_php and not re.search(r"proxy:fcgi|fastcgi", low):
+                continue
+            if re.search(r"proxy:fcgi|fastcgi|php-fpm", low):
+                categories["fastcgi_php"].append(line_number)
+            elif re.search(r"loadmodule\s+php|libphp", low):
+                categories["mod_php"].append(line_number)
+            elif re.search(r"sethandler|addhandler|application/x-httpd-php|\baction\s+", low):
+                categories["php_handler"].append(line_number)
+            else:
+                categories["other_php_reference"].append(line_number)
+        matches = {name: lines for name, lines in categories.items() if lines}
+        if matches:
+            found.append({"path": config, "matching_line_numbers_by_category": matches, "truncated": truncated})
+    return {"status": "checked", "configs_checked": checked, "references": found}
+
+
+def audit(root: str = "/", home: Optional[str] = None, env: Optional[Dict[str, str]] = None, runner: Any = subprocess.run) -> Dict[str, Any]:
+    environment = dict(os.environ if env is None else env)
+    home_path = home or environment.get("HOME") or str(Path.home())
+    issues: List[str] = []
+    candidates: Dict[str, Dict[str, str]] = {}
+
+    _path_candidates(environment, root, candidates, issues)
+    _scan_brew_roots(root, candidates, issues)
+    _scan_apps(home_path, root, candidates, issues)
+
+    brew = _brew_path(environment, root)
+    brew_data = _brew_metadata(environment, root, issues)
+    # Use the platform utility from its fixed OS path, never a PATH-resolved command.
+    ps = "/bin/ps" if _is_file("/bin/ps", root, issues) else None
+    process_data = _process_names(ps, root, runner, issues)
+    apache_data = _apache_references(root, issues)
+
+    docker = _command_path("docker", environment, root)
+    # Deliberately do not invoke docker: querying the daemon is outside this audit.
+    docker_data = {
+        "cli_path": docker,
+        "daemon_process_names": process_data["docker_daemon_process_names"],
+        "container_inventory": "not queried; Docker is never started or contacted",
+    }
+
+    php_metadata_present = any(
+        package["formula"] == "php" or package["formula"].startswith("php@")
+        for package in brew_data["packages"]
+    )
+    php_signals = bool(
+        candidates
+        or process_data["php_process_names"]
+        or apache_data["references"]
+        or php_metadata_present
+    )
+    if process_data["status"] != "checked" or process_data.get("truncated"):
+        issues.append("process listing incomplete")
+    if php_signals:
+        status = "candidate PHP present"
+    elif issues or docker is not None or docker_data["daemon_process_names"]:
+        status = "unknown visibility"
+    else:
+        status = "no PHP found in checked locations"
+
+    limitations = [
+        "A candidate path is not executed and is not proof that a service uses it.",
+        "Homebrew versions are package metadata, not versions read from PHP binaries; running worker versions and restart state are unknown.",
+        "Docker containers are not inspected; the CLI and daemon process name are observed without contacting or starting Docker.",
+        "Apache checks read only fixed main configuration paths and do not follow Include directives or load modules.",
+        "PHP probes cover bounded PATH entries, fixed Homebrew roots, known app locations, fixed Apache configs, and process names only.",
+    ]
+    if issues:
+        limitations.append("Some probes were incomplete; see the issue categories in the report.")
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "audit": "read-only PHP exposure discovery",
+        "status": status,
+        "summary": {
+            "candidate_count": len(candidates),
+            "homebrew_metadata_status": brew_data["status"],
+            "php_process_names": process_data["php_process_names"],
+            "apache_php_reference_count": len(apache_data["references"]),
+            "docker_cli_present": docker is not None,
+            "docker_daemon_process_detected": bool(docker_data["daemon_process_names"]),
+        },
+        "candidates": sorted(candidates.values(), key=lambda item: (item["source"], item["path"])),
+        "homebrew": brew_data,
+        "processes": process_data,
+        "apache_configuration": apache_data,
+        "docker": docker_data,
+        "advisory_baseline": {
+            "date": ADVISORY_BASELINE_DATE,
+            "source": "https://www.php.net/archive/2026.php",
+            "cves": ["CVE-2026-109618", "CVE-2026-109619"],
+            "fixed_versions": ADVISORY_THRESHOLDS,
+            "note": "Comparison applies only to Homebrew package metadata and is not a binary or live-worker verification.",
+        },
+        "limitations": limitations,
+        "probe_issues": sorted(set(issues)),
+    }
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = argparse.ArgumentParser(description="Read-only, bounded PHP exposure discovery; never runs PHP.")
+    parser.add_argument("--json", action="store_true", help="emit the report as JSON")
+    args = parser.parse_args(argv)
+    report = audit()
+    if args.json:
+        json.dump(report, sys.stdout, indent=2, sort_keys=True)
+        sys.stdout.write("\n")
+        return 0
+
+    print("Status: {}".format(report["status"]))
+    print("PHP candidate paths: {}".format(report["summary"]["candidate_count"]))
+    for candidate in report["candidates"]:
+        print("  {} [{}]".format(candidate["path"], candidate["source"]))
+    print("PHP process names: {}".format(", ".join(report["processes"]["php_process_names"]) or "none observed"))
+    print("Apache PHP references: {}".format(report["summary"]["apache_php_reference_count"]))
+    print("Docker: {}".format(report["docker"]["container_inventory"]))
+    if report["probe_issues"]:
+        print("Incomplete probes: {}".format("; ".join(report["probe_issues"])))
+    print("This is not a safety certification; see docs/php-security.md.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

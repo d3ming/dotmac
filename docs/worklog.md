@@ -4,6 +4,10 @@
 
 Keep Dotmac's portable setup small and safe. Current focus: keep installer-written shell settings local while preserving shared defaults and existing shell behavior. Local-LLM evaluation and browser cleanup remain separate workstreams.
 
+## PHP security review — 2026-10-22
+
+Added `scripts/php-security-check`, synthetic regression tests, and `docs/php-security.md` for the October 21 PHP advisory. The checker is read-only, never runs PHP, and separates discovery from patch/restart verification. No PHP was found in checked host locations; container and other-host checks remain separate. No broad package upgrades or speculative PHP settings were applied. Existing shell-migration edits are preserved and excluded from the security commit.
+
 ## Known state
 
 - `evals/local-llm/` provides an opt-in Promptfoo harness: six deterministic workflow tasks, a separate native tool-call probe with no execution, and thirteen offline assertion checks. It fixes local Ollama calls to 8K context, serial execution, thinking off, and per-request unloading; telemetry/sharing are disabled and results/logs stay in ignored `.agent-local/llm/`. No model grader or agent-default change is involved.
@@ -21,7 +25,7 @@ Keep Dotmac's portable setup small and safe. Current focus: keep installer-writt
 
 ## Completed on this Mac — 2026-10-20
 
-- Shell startup: replaced the `.zshrc` and `.zprofile` symlinks with real local loaders and moved shared defaults under `stow/home/.config/zsh/`. Preserved the Antigravity PATH addition locally and left `.zshrc.local` unchanged. `home check|apply` now previews and migrates old links with private backups, preserves installer additions on reruns, and blocks unrelated configs before applying. Full CLI tests and real Stow/Zsh regression tests passed in a scratch checkout of the final layout; live PATH, editor, prompt, aliases, local-file hashes, and repeat apply matched the saved baseline. Original contents and links are backed up under ignored `.agent-local/backups/2026-10-20-local-shell-*`. Changes remain local for review.
+- Shell startup: replaced the `.zshrc` and `.zprofile` symlinks with real local loaders and moved shared defaults under `stow/home/.config/zsh/`. Preserved the Antigravity PATH addition locally and left `.zshrc.local` unchanged. `home check|apply` now previews and migrates old links with private backups, preserves installer additions on reruns, and blocks unrelated configs before applying. Full CLI tests and real Stow/Zsh regression tests passed in a scratch checkout of the final layout; live PATH, editor, prompt, aliases, local-file hashes, and repeat apply matched the saved baseline. Original contents and links are backed up under ignored `.agent-local/backups/2026-10-20-local-shell-*`. Committed as `374029b` after shell and CLI regression tests passed.
 - Trackpad preferences (DOTMAC-PREFS-001): turned off swipe-between-pages (key was unset, now `0`) and confirmed natural scrolling was already off. Added both to `scripts/macos-preferences` with test coverage, changed the quick-start prompt to apply preferences, and updated docs. This checkout was 21 commits behind `origin/main`; an earlier standalone `macos/defaults.sh` was dropped in favor of the existing script. Browsers need a relaunch to pick up the swipe change; the gesture itself has not been tried by hand.
 
 ## Completed on this Mac — 2026-10-14
