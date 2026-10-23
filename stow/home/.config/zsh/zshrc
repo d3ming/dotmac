@@ -47,6 +47,3 @@ add-zsh-hook precmd vcs_info
 setopt PROMPT_SUBST
 PROMPT='%F{yellow}%n%f at %F{cyan}%m%f in %F{green}%~%f${vcs_info_msg_0_}%f
 %# '
-
-# Keep machine-specific customizations and secrets out of this repo.
-[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

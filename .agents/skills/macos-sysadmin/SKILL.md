@@ -37,6 +37,7 @@ not use `sudo mo`, without explicit authorization.
 - Make the smallest reversible change that fulfills the explicit request. Do not install software, apply preferences, alter security/network/account settings, or change scheduled jobs unless the request authorizes that action.
 - Prefer maintained project interfaces, especially `scripts/dotmac`, and preview before applying. Keep Homebrew package setup, Stow home links, and macOS preferences separate; never use `stow --adopt`.
 - Preserve existing files, user changes, local backups, and pending handoff work. Keep credentials, private keys, recovery data, and machine-specific inventories out of tracked files and logs.
+- Keep standard files that installers edit as local entry points loading shared defaults. For Zsh, `home apply` manages local `.zshrc`/`.zprofile` loaders and shared `~/.config/zsh/` links; preserve `.local` hooks and preview old-link migration before applying. Installer changes belong locally until explicitly reviewed for portability.
 - Review the resulting diff and run relevant tests or read-back checks. Report what was and was not changed, the exact verification performed, and any remaining uncertainty.
 - Follow the publication policy in `AGENTS.md`, subject to the current user request and any more specific handoff restriction. Do not commit or push while those constraints leave publication unauthorized.
 

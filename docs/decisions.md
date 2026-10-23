@@ -2,6 +2,12 @@
 
 Record choices that should guide the next agent or the next Mac. Revisit them when evidence or preferences change.
 
+## 2026-10-20 — Make installer-written shell entry points local
+
+Keep `~/.zshrc` and `~/.zprofile` as real, untracked local files. They source shared defaults linked under `~/.config/zsh/`, followed by optional `.local` overrides. `home apply` creates these loaders once, migrates only known old Dotmac links with private backups, and preserves later installer edits. Unrelated startup files or links require review during preflight. This follows the same ownership boundary used for Git's real local `~/.gitconfig`: normal tool writes should land outside public Git; portable defaults enter the repo deliberately.
+
+Evidence: the Antigravity PATH addition landed in tracked `.zshrc` because the home startup file was a symlink. Asking installers to use `.zshrc.local` cannot enforce the boundary. [Zsh's startup-file rules](https://zsh.sourceforge.io/Doc/Release/Files.html) use `.zprofile` for login shells and `.zshrc` for interactive shells, so both need local entry points. Tests reproduce installer appends with real Stow, verify shared defaults and local overrides load, exercise dangling-link migration, and preserve unrelated configs. The old `.zshrc.local` hook remains supported; this supersedes directly linking the two startup files.
+
 ## 2026-10-14 — Real Chrome is the shared agent browser; Helium is personal
 
 Helium is the personal browser. Google Chrome is reserved for agents: `scripts/agent-chrome install` loads the LaunchAgent `ai.dotmac.agent-chrome`, which keeps real Chrome running on its own profile (`~/Library/Application Support/Google/Chrome Agent`) with CDP on `127.0.0.1:9229`. Any local agent (Hermes, Claude, Codex) can attach, one at a time. The agent profile started as an APFS clone of the old personal Chrome data, so extensions, cookies, and sign-ins carried over (macOS stores Chrome's cookie key in the Keychain per app, not per profile directory). Signed-in financial accounts are read-only for agents.

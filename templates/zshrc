@@ -1,0 +1,4 @@
+# Local interactive Zsh startup. Installers can safely append settings here.
+# Load shared defaults first, then this Mac's optional overrides.
+[[ -r "$HOME/.config/zsh/zshrc" ]] && source "$HOME/.config/zsh/zshrc"
+[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

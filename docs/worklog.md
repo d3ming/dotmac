@@ -2,7 +2,7 @@
 
 ## Current goal
 
-Keep Dotmac's portable setup small and safe. Current focus: establish an optional local-LLM evaluation harness, then choose one real workflow pilot before selecting a permanent model or changing agent defaults.
+Keep Dotmac's portable setup small and safe. Current focus: keep installer-written shell settings local while preserving shared defaults and existing shell behavior. Local-LLM evaluation and browser cleanup remain separate workstreams.
 
 ## Known state
 
@@ -10,7 +10,7 @@ Keep Dotmac's portable setup small and safe. Current focus: establish an optiona
 - `scripts/dotmac` lists, plans, and applies the `essential`, `development`, `diagnostics`, `gui-apps`, and `data` profiles; it previews outdated entries, explicitly upgrades one selected profile, and streams a local Homebrew inventory on demand. Package apply post-validates the selected profile. It also previews/applies Stow links and delegates explicit macOS preference actions. JSON output is available with `--json`.
 - OS-level scheduled automation is outside Dotmac's package profiles. Inspect live cron/launchd/login-item state, find the owning repo, and keep detailed per-Mac inventories out of tracked public docs.
 - The essential Brewfile contains Git, GitHub CLI, GNU Stow, ripgrep, uv, Ghostty, Rectangle, and 1Password. Optional Brewfiles cover development tools (including 1Password CLI), read-only-first diagnostics (Mole, btop, dua, and jq), GUI apps (Zed and Obsidian), and data work.
-- Dotmac defines eight managed home files, including portable Git defaults, a global Git ignore, and Ghostty appearance. On **this** Mac all are linked as of 2026-10-02; machine-specific Git and Zsh settings live in untracked `~/.gitconfig` and `~/.zshrc.local` (Git moved to the XDG layout on 2026-10-03). Ghostty's separate macOS config may still override the managed XDG file until migrated.
+- Dotmac defines eight shared home files, including Zsh fragments, portable Git defaults, a global Git ignore, and Ghostty appearance. `home apply` creates real local `~/.zshrc` and `~/.zprofile` loaders; installer additions stay there and existing `.local` hooks still load. Git's `~/.gitconfig` is also local. Ghostty's separate macOS config may still override the managed XDG file until migrated.
 - The repository is hosted publicly at https://github.com/d3ming/dotmac. GitHub secret scanning and push protection were enabled at initial publish, when alert count was zero; that alert count has not been rechecked in this update. GitHub Actions runs Gitleaks for pushes, pull requests, and manual scans; `.agent-local/` remains excluded from Git.
 - The optional `diagnostics` profile and `docs/diagnostics-tools.md` standardize read-only-first memory/disk triage around Mole, btop, dua, jq, and native macOS commands. No profile apply or cleanup was run.
 - Machine-local agent context uses `.agent-local/INDEX.md` plus dated, project-coded workstream handoffs; the naming and update rules are in `AGENTS.md` and `docs/decisions.md`.
@@ -21,6 +21,7 @@ Keep Dotmac's portable setup small and safe. Current focus: establish an optiona
 
 ## Completed on this Mac — 2026-10-20
 
+- Shell startup: replaced the `.zshrc` and `.zprofile` symlinks with real local loaders and moved shared defaults under `stow/home/.config/zsh/`. Preserved the Antigravity PATH addition locally and left `.zshrc.local` unchanged. `home check|apply` now previews and migrates old links with private backups, preserves installer additions on reruns, and blocks unrelated configs before applying. Full CLI tests and real Stow/Zsh regression tests passed in a scratch checkout of the final layout; live PATH, editor, prompt, aliases, local-file hashes, and repeat apply matched the saved baseline. Original contents and links are backed up under ignored `.agent-local/backups/2026-10-20-local-shell-*`. Changes remain local for review.
 - Trackpad preferences (DOTMAC-PREFS-001): turned off swipe-between-pages (key was unset, now `0`) and confirmed natural scrolling was already off. Added both to `scripts/macos-preferences` with test coverage, changed the quick-start prompt to apply preferences, and updated docs. This checkout was 21 commits behind `origin/main`; an earlier standalone `macos/defaults.sh` was dropped in favor of the existing script. Browsers need a relaunch to pick up the swipe change; the gesture itself has not been tried by hand.
 
 ## Completed on this Mac — 2026-10-14

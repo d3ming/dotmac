@@ -379,8 +379,56 @@ profile_command() {
 	install_bundle_and_verify "$profile" "$file"
 }
 
+shell_startup_state() {
+	local name=$1 target="$HOME/.$1" link parent include
+	include='[[ -r "$HOME/.config/zsh/'"$name"'" ]] && source "$HOME/.config/zsh/'"$name"'"'
+	if [[ -L $target ]]; then
+		link=$(readlink "$target")
+		[[ $link == /* ]] || link="$HOME/$link"
+		if parent=$(cd "$(dirname "$link")" 2>/dev/null && pwd -P) &&
+			[[ $parent/${link##*/} == "$repo_dir/stow/home/.$name" ]]; then
+			printf 'legacy\n'
+		else
+			printf 'conflict\n'
+		fi
+	elif [[ ! -e $target ]]; then
+		printf 'missing\n'
+	elif [[ -f $target ]] && grep -Fqx "$include" "$target"; then
+		printf 'local\n'
+	else
+		printf 'conflict\n'
+	fi
+}
+
+install_shell_startups() {
+	local name state target temporary backup=''
+	for name in zprofile zshrc; do
+		state=$(shell_startup_state "$name")
+		[[ $state != local ]] || continue
+		[[ $state == missing || $state == legacy ]] || return 1
+		target="$HOME/.$name"
+		if [[ $state == legacy ]]; then
+			if [[ -z $backup ]]; then
+				backup=$(umask 077; mkdir -p "$repo_dir/.agent-local/backups" && mktemp -d "$repo_dir/.agent-local/backups/$(date +%F)-local-shell.XXXXXX") || return
+			fi
+			cp -P "$target" "$backup/.$name" || return
+			if [[ -f $target ]]; then
+				(umask 077; cat "$target" > "$backup/.$name.contents") || return
+			fi
+		fi
+		temporary=$(mktemp "$HOME/.$name.dotmac.XXXXXX") || return
+		if ! cat "$repo_dir/templates/$name" > "$temporary" || ! mv -f "$temporary" "$target"; then
+			rm -f "$temporary"
+			return 1
+		fi
+		printf 'Created local ~/.%s; installer additions stay local\n' "$name"
+	done
+	[[ -z $backup ]] || printf 'Previous shell links backed up to %s\n' "$backup"
+	return 0
+}
+
 home_command() {
-	local action=$1 preview='' applied='' details='' rc
+	local action=$1 preview='' applied='' details='' rc name state shell_plan='' shell_output=''
 	(($# == 1)) || fail 'usage: scripts/dotmac home check|apply' 2
 	case $action in check|apply) ;; *) fail 'usage: scripts/dotmac home check|apply' 2 ;; esac
 	require_macos
@@ -393,11 +441,31 @@ home_command() {
 		result false "home $action" home conflicts "$rc" "$preview"
 		return "$rc"
 	fi
+	for name in zprofile zshrc; do
+		state=$(shell_startup_state "$name")
+		case $state in
+			missing) shell_plan+="Create local ~/.$name from templates/$name"$'\n' ;;
+			legacy) shell_plan+="Migrate Dotmac ~/.$name symlink to a local file (with backup)"$'\n' ;;
+			local) shell_plan+="Local ~/.$name already loads shared defaults; preserve it"$'\n' ;;
+			*)
+				result false "home $action" home conflicts 1 "Preserve existing ~/.$name and integrate the loader from templates/$name before applying; Dotmac will not overwrite an unrelated file or symlink."
+				return 1
+				;;
+		esac
+	done
+	preview+=$'\n'"$shell_plan"
 	if [[ $action == check ]]; then
 		result true 'home check' home clean 0 "$preview"
 		return 0
 	fi
 	if applied=$(stow -v -d "$repo_dir/stow" -t "$HOME" home 2>&1); then
+		if shell_output=$(install_shell_startups); then
+			applied+=$'\n'"$shell_output"
+		else
+			rc=$?
+			result false 'home apply' home failed "$rc" "$applied"$'\nCould not create local shell startup files; check filesystem permissions and the home preview.'
+			return "$rc"
+		fi
 		# Git writes `--global` settings to ~/.config/git/config (tracked here) when ~/.gitconfig
 		# is absent. Keep a private ~/.gitconfig so identity and tool-written settings stay local.
 		if [[ ! -e $HOME/.gitconfig && ! -L $HOME/.gitconfig ]]; then

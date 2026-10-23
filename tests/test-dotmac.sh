@@ -16,6 +16,8 @@ grep -Eq '^name: macos-sysadmin$' "$skill_file"
 grep -Eq '^description: .+' "$skill_file"
 grep -Fq 'docs/setup-levels.md' "$skill_file"
 
+bash "$repo_dir/tests/test-shell-home.sh"
+
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/dotmac-test.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 fakebin="$tmp/bin"
@@ -212,6 +214,7 @@ check_home=$("$repo_dir/scripts/dotmac" --json home check)
 grep -q '^-n ' "$DOTMAC_STOW_LOG"
 # check stays read-only.
 [[ ! -e $home_dir/.gitconfig ]]
+[[ ! -e $home_dir/.zshrc && ! -e $home_dir/.zprofile ]]
 
 : > "$DOTMAC_STOW_LOG"
 home_apply=$("$repo_dir/scripts/dotmac" --json home apply)
@@ -221,10 +224,17 @@ home_apply=$("$repo_dir/scripts/dotmac" --json home apply)
 [[ -f $home_dir/.gitconfig && ! -L $home_dir/.gitconfig ]]
 [[ $(stat -f %Lp "$home_dir/.gitconfig") == 600 ]]
 [[ $home_apply == *'Created ~/.gitconfig'* ]]
+[[ -f $home_dir/.zshrc && ! -L $home_dir/.zshrc ]]
+[[ -f $home_dir/.zprofile && ! -L $home_dir/.zprofile ]]
+[[ $(stat -f %Lp "$home_dir/.zshrc") == 600 ]]
+[[ $(stat -f %Lp "$home_dir/.zprofile") == 600 ]]
+printf '\nexport DOTMAC_INSTALLER_TEST=preserved\n' >> "$home_dir/.zshrc"
 printf '[user]\n\tname = Test\n' >> "$home_dir/.gitconfig"
 home_reapply=$("$repo_dir/scripts/dotmac" --json home apply)
 grep -q 'name = Test' "$home_dir/.gitconfig"
+grep -q 'DOTMAC_INSTALLER_TEST=preserved' "$home_dir/.zshrc"
 [[ $home_reapply != *'Created ~/.gitconfig'* ]]
+[[ $home_reapply != *'Created local ~/.zshrc'* ]]
 
 : > "$DOTMAC_STOW_LOG"
 if MOCK_STOW_PREVIEW_STATUS=1 "$repo_dir/scripts/dotmac" --json home apply >/dev/null; then

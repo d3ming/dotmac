@@ -1,0 +1,4 @@
+# Local login-shell startup. Installers can safely append settings here.
+# Load shared defaults first, then this Mac's optional overrides.
+[[ -r "$HOME/.config/zsh/zprofile" ]] && source "$HOME/.config/zsh/zprofile"
+[[ -r "$HOME/.zprofile.local" ]] && source "$HOME/.zprofile.local"
